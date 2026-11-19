@@ -28,7 +28,7 @@ Forge 1.20.1 / 1.21.1、NeoForge 1.20.4 / 1.21.1、Fabric 1.20.1 / 1.21.1。
 
 ## 工程规范
 
-开发、测试、发布与回滚的统一流程见 `docs/development-and-testing.md`。
+小团队日常开发、测试和交付以 `docs/simple-delivery.md` 为准；较大规模测试矩阵可参考 `docs/development-and-testing.md`。
 
 ## License
 
