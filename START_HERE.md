@@ -29,4 +29,4 @@
 
 ## 接手顺序
 
-阅读 `START_HERE.md` → `docs/public-scope.md` → `docs/simple-delivery.md`。完成后更新本页和 `CHANGELOG.md`。
+阅读 `START_HERE.md` → `DEVELOPMENT.md` → `docs/simple-delivery.md`。完成后更新本页和 `CHANGELOG.md`。
