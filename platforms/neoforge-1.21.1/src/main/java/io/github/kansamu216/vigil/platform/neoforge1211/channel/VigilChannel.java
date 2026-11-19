@@ -1,6 +1,8 @@
 package io.github.kansamu216.vigil.platform.neoforge1211.channel;
 
 import java.util.concurrent.atomic.AtomicLong;
+import io.github.kansamu216.vigil.platform.neoforge1211.network.VigilFramePayload;
+import io.github.kansamu216.vigil.platform.neoforge1211.network.VigilNetwork;
 import io.github.kansamu216.vigil.protocol.VigilChannels;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -30,6 +32,10 @@ public final class VigilChannel {
                 VigilPingPayload.TYPE,
                 VigilPingPayload.STREAM_CODEC,
                 VigilChannel::handlePing);
+        registrar.playBidirectional(
+                VigilFramePayload.TYPE,
+                VigilFramePayload.STREAM_CODEC,
+                VigilNetwork::handle);
     }
 
     /**

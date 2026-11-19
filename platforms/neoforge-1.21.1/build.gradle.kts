@@ -8,7 +8,7 @@ plugins {
 }
 
 group = "io.github.kansamu216.vigil.platform"
-version = "0.1.0-dev.0"
+version = "0.1.0-dev.1"
 
 // 1.21.x adapters use Java 21; shared core keeps the Java 8 API surface and is
 // consumed as a versioned artifact, never as a source set of this build.
@@ -26,8 +26,6 @@ val coreVersion: String by project
 val coreGroup = "io.github.kansamu216.vigil"
 val sharedRoot = "io.github.kansamu216.vigil"
 val clientInternalRoot = "io.github.kansamu216.vigil.client.internal"
-// 每个共享包都要重定位：核心产物之间存在传递依赖（protocol → model），
-// 只搬一个包会让另一个包在两个 side jar 里形成 split package。
 val sharedNamespaces = listOf(
     "$sharedRoot.protocol",
     "$sharedRoot.model",
@@ -37,15 +35,27 @@ val sharedNamespaces = listOf(
 val sharedNamespace = "$sharedRoot.protocol"
 val clientInternalNamespace = "$clientInternalRoot.protocol"
 val platformPackagePrefix = "io.github.kansamu216.vigil.platform."
+val serverPackagePrefix = "io.github.kansamu216.vigil.platform.neoforge1211.server."
 
-// Only this configuration is bundled into the mod jars. NeoForge and Minecraft
-// must never end up inside them, so the shaded content is declared explicitly
-// instead of using runtimeClasspath.
-val vigilCore: Configuration by configurations.creating
+// Separate content sets: the client must never ship server runtime or server
+// adapter classes.
+val sharedCore: Configuration by configurations.creating
+val serverCore: Configuration by configurations.creating
+val clientCore: Configuration by configurations.creating
+val devCore: Configuration by configurations.creating
 
-// ModDevGradle registers project-level repositories, which makes Gradle ignore
-// the settings-level list. The core repository is therefore declared here too;
-// the path stays relative so no machine-local absolute path enters the build.
+// Server-only sources are compiled into the server jar and loaded only on a
+// dedicated server through @EventBusSubscriber(dist = DEDICATED_SERVER).
+val serverSourceSet = sourceSets.create("server") {
+    java.srcDir("src/server/java")
+    resources.srcDir("src/server/resources")
+}
+configurations["serverImplementation"].extendsFrom(configurations["implementation"])
+configurations["serverRuntimeOnly"].extendsFrom(configurations["runtimeOnly"])
+// 服务端源集需要加载器与 Minecraft 类型，继承主源集的编译/运行类路径。
+serverSourceSet.compileClasspath += sourceSets.main.get().output + sourceSets.main.get().compileClasspath
+serverSourceSet.runtimeClasspath += serverSourceSet.output + sourceSets.main.get().runtimeClasspath
+
 repositories {
     maven { url = uri("${rootDir}/../../build/module-repo") }
     maven("https://maven.neoforged.net/releases")
@@ -53,23 +63,24 @@ repositories {
 }
 
 dependencies {
-    // Bundled into both side jars by the shadow tasks only; declared as a normal
-    // implementation dependency so dev runs resolve the same artifact version.
     implementation("$coreGroup:shared-protocol:$coreVersion")
-    vigilCore("$coreGroup:shared-protocol:$coreVersion")
+    "serverImplementation"("$coreGroup:server-runtime:$coreVersion")
+
+    sharedCore("$coreGroup:shared-protocol:$coreVersion")
+    clientCore("$coreGroup:shared-protocol:$coreVersion")
+    serverCore("$coreGroup:shared-protocol:$coreVersion")
+    serverCore("$coreGroup:server-runtime:$coreVersion")
+    devCore("$coreGroup:shared-protocol:$coreVersion")
+    devCore("$coreGroup:server-runtime:$coreVersion")
 }
 
-// Dev-only classpath folder for the versioned core artifact. Nothing is
-// compiled here; the core jar is expanded so FML can load it in dev runs.
 val coreDevSourceSet = sourceSets.create("coreDev") {
     java.setSrcDirs(emptyList<String>())
     resources.setSrcDirs(emptyList<String>())
 }
 
 val syncCoreForDev = tasks.register<Sync>("syncCoreForDev") {
-    // 核心产物有传递依赖（protocol → model），开发运行需要展开全部 jar；
-    // 每个 jar 都有自己的 MANIFEST，展开时必须排除元数据并允许重复覆盖。
-    from(provider { configurations["vigilCore"].files.map { zipTree(it) } }) {
+    from(provider { devCore.files.map { zipTree(it) } }) {
         exclude("META-INF/**")
     }
     duplicatesStrategy = org.gradle.api.file.DuplicatesStrategy.EXCLUDE
@@ -79,8 +90,6 @@ val syncCoreForDev = tasks.register<Sync>("syncCoreForDev") {
 coreDevSourceSet.output.dir(mapOf("builtBy" to syncCoreForDev), layout.buildDirectory.dir("core-dev"))
 
 neoForge {
-    // NeoForge 21.1.x is the 1.21.1 line. DEVELOPMENT.md section 14 requires M0
-    // to select and lock one official combination instead of floating versions.
     version = "21.1.267"
 
     runs {
@@ -95,30 +104,35 @@ neoForge {
     mods {
         register("vigil") {
             sourceSet(sourceSets.main.get())
-            // FML's dev loader only reads mod folders, not the JVM classpath, so
-            // the versioned core artifact is synced into a second folder that
-            // belongs to the same mod. Production jars get it via shadowing.
+            sourceSet(serverSourceSet)
             sourceSet(coreDevSourceSet)
         }
     }
 }
 
-fun ShadowJar.applySidePackaging(side: String) {
+tasks.named("runServer") {
+    dependsOn(serverSourceSet.classesTaskName)
+}
+
+fun ShadowJar.applySidePackaging(side: String, core: Configuration, includeServer: Boolean) {
     archiveBaseName.set("vigil-$side-neoforge-1.21.1")
     archiveVersion.set("${project.version}")
     archiveClassifier.set("")
-    setConfigurations(listOf<FileCollection>(vigilCore))
+    setConfigurations(listOf<FileCollection>(core))
     from(sourceSets.main.get().output)
+    if (includeServer) {
+        from(serverSourceSet.output)
+    }
 }
 
 val serverJar = tasks.named<ShadowJar>("shadowJar") {
-    applySidePackaging("server")
+    applySidePackaging("server", serverCore, true)
 }
 
 // The client jar relocates shared core classes so a client and a server jar can
 // never contribute the same package to one class loader.
 val clientJar = tasks.register<ShadowJar>("clientJar") {
-    applySidePackaging("client")
+    applySidePackaging("client", clientCore, false)
     sharedNamespaces.forEach { namespace ->
         relocate(namespace, namespace.replace(sharedRoot, clientInternalRoot))
     }
@@ -148,13 +162,12 @@ fun ByteArray.containsAscii(text: String): Boolean =
     String(this, Charsets.ISO_8859_1).contains(text)
 
 /**
- * M0 acceptance for this platform: both sides package the mod metadata and the
- * core constants, the client relocates them, and no package outside the
- * platform's own namespace appears in both jars.
+ * Side jar acceptance: metadata, relocation, no server code in the client, and
+ * no package outside the platform namespace shared by both jars.
  */
 val verifySideJars = tasks.register("verifySideJars") {
     group = "verification"
-    description = "Checks side jars for metadata, relocation and split packages."
+    description = "Checks side jars for metadata, relocation, side isolation and split packages."
     dependsOn(serverJar, clientJar)
 
     doLast {
@@ -194,8 +207,20 @@ val verifySideJars = tasks.register("verifySideJars") {
             problems += "client jar still carries unrelocated packages: ${unrelocated.joinToString(", ")}"
         }
 
-        // Relocation must rewrite the references inside the mod's own classes,
-        // not only move the shared class file.
+        val serverBootstrap = "io.github.kansamu216.vigil.platform.neoforge1211.server.VigilServer"
+        if (serverBootstrap !in serverClasses) {
+            problems += "server jar does not carry $serverBootstrap"
+        }
+        if (clientClasses.any { it.startsWith(serverPackagePrefix) }) {
+            problems += "client jar contains server adapter classes"
+        }
+        if (clientPackages.any { it.startsWith("$sharedRoot.server.") }) {
+            problems += "client jar contains server runtime packages"
+        }
+        if ("$sharedRoot.server.runtime.GuardRuntime" !in serverClasses) {
+            problems += "server jar does not carry the server runtime"
+        }
+
         val channelClass = "io.github.kansamu216.vigil.platform.neoforge1211.channel.VigilChannel"
         val clientChannel = classBytes(clientFile, channelClass)
         val sharedPath = sharedNamespace.replace('.', '/')
@@ -223,7 +248,7 @@ val verifySideJars = tasks.register("verifySideJars") {
             )
         }
         logger.lifecycle(
-            "[VIGIL-M0] verified side jars: server={} client={} relocation={}",
+            "[VIGIL-SIDE] verified server={} client={} relocation={}",
             serverFile.name, clientFile.name, clientInternalNamespace
         )
     }
@@ -237,8 +262,6 @@ tasks.named("check") {
     dependsOn(verifySideJars)
 }
 
-// The plain jar has no bundled core and is not a deliverable; keep it clearly
-// separated from the two side jars produced by the shadow tasks.
 tasks.named<Jar>("jar") {
     archiveClassifier.set("thin")
 }

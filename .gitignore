@@ -16,6 +16,7 @@ logs/
 # Secrets and player data must never enter the repository.
 *.pem
 *.key
+*.der
 *.db
 *.db-wal
 *.db-shm

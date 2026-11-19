@@ -17,6 +17,7 @@ class VigilChannelsTest {
     void namespaceAndMessageIdAreStable() {
         assertEquals("vigil", VigilChannels.namespace());
         assertEquals("ping", VigilChannels.pingId());
+        assertEquals("frame", VigilChannels.frameId());
     }
 
     @Test

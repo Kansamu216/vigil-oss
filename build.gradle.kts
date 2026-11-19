@@ -1,5 +1,5 @@
 val productGroup = "io.github.kansamu216.vigil"
-val productVersion = "0.1.0-dev.0"
+val productVersion = "0.1.0-dev.1"
 val sharedLibs = extensions
     .getByType(org.gradle.api.artifacts.VersionCatalogsExtension::class.java)
     .named("libs")

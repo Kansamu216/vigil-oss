@@ -16,8 +16,11 @@ public final class VigilChannels {
     /** 通道命名空间，与 modId 一致；已发布后改名等于协议不兼容。 */
     private static final String NAMESPACE = "vigil";
 
-    /** M0 的连通性探测消息 id，只用于验证双端注册与收发。 */
+    /** 连通性探测消息 id。 */
     private static final String PING = "ping";
+
+    /** 会话帧承载通道 id，负载是已编码的协议信封。 */
+    private static final String FRAME = "frame";
 
     /**
      * 通道注册版本。M1 定义 wire 协议时由这里起算，
@@ -34,6 +37,10 @@ public final class VigilChannels {
 
     public static String pingId() {
         return PING;
+    }
+
+    public static String frameId() {
+        return FRAME;
     }
 
     public static int protocolVersion() {

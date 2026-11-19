@@ -22,7 +22,16 @@ public final class Database implements Closeable {
     }
 
     public static Database open(Path file) throws SQLException {
-        return open("jdbc:sqlite:" + file.toAbsolutePath());
+        Path absolute = file.toAbsolutePath();
+        Path parent = absolute.getParent();
+        if (parent != null) {
+            try {
+                java.nio.file.Files.createDirectories(parent);
+            } catch (java.io.IOException e) {
+                throw new SQLException("failed to create database directory: " + parent, e);
+            }
+        }
+        return open("jdbc:sqlite:" + absolute);
     }
 
     /** 测试用内存库：{@code jdbc:sqlite::memory:}。 */
@@ -31,6 +40,13 @@ public final class Database implements Closeable {
     }
 
     private static Database open(String url) throws SQLException {
+        // 驱动由本模块显式加载：Mod 环境下类可能来自重定位/展开后的目录，
+        // 不能依赖 java.sql.Driver 的 ServiceLoader 自动发现。
+        try {
+            Class.forName("org.sqlite.JDBC");
+        } catch (ClassNotFoundException e) {
+            throw new SQLException("SQLite JDBC driver is not available", e);
+        }
         Connection connection = DriverManager.getConnection(url);
         try (Statement statement = connection.createStatement()) {
             statement.execute("PRAGMA journal_mode = WAL");
