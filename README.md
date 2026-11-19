@@ -26,6 +26,10 @@ Forge 1.20.1 / 1.21.1、NeoForge 1.20.4 / 1.21.1、Fabric 1.20.1 / 1.21.1。
 
 平台目录为独立 Gradle 构建，详见 `platforms/README.md`。
 
+## 工程规范
+
+开发、测试、发布与回滚的统一流程见 `docs/development-and-testing.md`。
+
 ## License
 
 MIT（见 `LICENSE`）。
