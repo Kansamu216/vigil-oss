@@ -8,7 +8,9 @@ pluginManagement {
 }
 dependencyResolutionManagement {
     repositories {
-        mavenLocal()
+        // Versioned core artifacts published by the root build. Relative on
+        // purpose: no machine-local absolute path and no implicit mavenLocal().
+        maven("../../build/module-repo")
         maven("https://maven.neoforged.net/releases")
         mavenCentral()
     }

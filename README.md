@@ -1,34 +1,37 @@
-# Vigil（守夜）— OSS
+# Vigil（守夜）
 
-Vigil 的公开稳定子集：跨 Forge、NeoForge、Fabric 的 Minecraft 反作弊组件。
+Vigil 是一个可独立安装和构建的 Minecraft 客户端观测与服务端校验 Mod。
 
-> 当前状态：**仓库骨架 / 架构验证阶段**。尚未实现反作弊业务逻辑，当前构建只用于验证模块结构与 Java 工具链。
+客户端只上报观测事实，服务端负责验证、判定、审计和处置。协议使用标准密码学，密钥与玩家数据不进入仓库。
 
-本仓库由私有主线按模块白名单导出，不是独立维护的 fork。公共代码在私有主线修改后同步到此仓库；公开贡献会先回port 到主线再重新导出。
+## 当前实现
 
-## 公开范围
+- 有界协议信封、挑战/认证/报告编解码与 AAD 绑定。
+- AES-256-GCM、RSA-OAEP、SHA256withRSA、一次性 nonce 和单调序号。
+- 会话握手、限流、超时与并发重放防护。
+- 服务端证据分级、保守处置门槛、SQLite 封禁与审计存储。
+- NeoForge 1.21.1 双端 Mod 骨架与独立 server/client 产物。
 
-- 签名挑战、加密会话、nonce 防重放与保活。
-- Mod 清单、SHA-256 白名单和基础自身完整性。
-- UUID/IP 封禁与基础审计。
-- 仅游戏窗口的管理员主动截图。
-- 保守的行为统计告警。
+客户端采集 Agent 和平台事件接入仍在开发中；当前版本不是可直接部署的完整反作弊产品。
 
-不包含全桌面截图、硬件账号关联、进程/目录深度扫描、实验性注入检测和私有管理 API。公开版不是完整防护承诺，具体边界见 `docs/public-scope.md` 与 `docs/privacy.md`。
-
-## 当前平台目标
-
-Forge 1.20.1 / 1.21.1、NeoForge 1.20.4 / 1.21.1、Fabric 1.20.1 / 1.21.1。
+## 构建与测试
 
 ```bash
 ./gradlew build
+./gradlew publishModules
+./gradlew -p platforms/neoforge-1.21.1 build
 ```
 
-平台目录为独立 Gradle 构建，详见 `platforms/README.md`。
+需要 JDK 21。平台构建消费根构建发布的显式版本模块，不引用源码目录或本机绝对路径。
 
-## 工程规范
+## 目录
 
-主开发交接文档见 `DEVELOPMENT.md`。小团队日常开发、测试和交付以 `docs/simple-delivery.md` 为准；较大规模测试矩阵可参考 `docs/development-and-testing.md`。
+- `modules/shared`：协议、加密、模型和平台 SPI。
+- `modules/server`：会话、判定、存储与运行时装配。
+- `platforms/neoforge-1.21.1`：独立的 NeoForge 1.21.1 构建。
+- `test-support/session-harness`：协议与会话测试基座。
+
+架构见 `docs/architecture.md`，隐私约束见 `docs/privacy.md`。
 
 ## License
 

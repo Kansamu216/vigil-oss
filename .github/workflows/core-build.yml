@@ -1,4 +1,4 @@
-name: core-build
+name: build
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
   pull_request:
 
 jobs:
-  build:
+  core:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -14,29 +14,18 @@ jobs:
         with:
           distribution: temurin
           java-version: "21"
-      - name: Build shared core
+      - name: Build and test modules
         run: ./gradlew --no-daemon build
 
-  platform-build:
+  neoforge-1-21-1:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - { path: forge-1.20.1, java: "17" }
-          - { path: forge-1.21.1, java: "21" }
-          - { path: neoforge-1.20.4, java: "17" }
-          - { path: neoforge-1.21.1, java: "21" }
-          - { path: fabric-1.20.1, java: "17" }
-          - { path: fabric-1.21.1, java: "21" }
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: ${{ matrix.java }}
-      - name: Build independent platform skeleton
-        run: ./gradlew -p platforms/${{ matrix.path }} --no-daemon build
-
-# Public export/surface checks are added with the M3 exporter. Manual copies
-# are not considered valid public releases.
+          java-version: "21"
+      - name: Publish versioned modules
+        run: ./gradlew --no-daemon publishModules
+      - name: Build and verify side jars
+        run: ./gradlew -p platforms/neoforge-1.21.1 --no-daemon build

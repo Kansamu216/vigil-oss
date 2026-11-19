@@ -18,34 +18,20 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "vigil-oss"
+rootProject.name = "vigil"
 
-val publicModules = listOf(
+val modules = listOf(
     "modules:shared:protocol",
     "modules:shared:crypto",
     "modules:shared:model",
     "modules:shared:platform-api",
-    "modules:shared:detection-api",
     "modules:server:runtime",
     "modules:server:session",
     "modules:server:storage",
     "modules:server:decision",
-    "modules:server:feature-integrity",
-    "modules:server:feature-ban",
-    "modules:server:feature-audit",
-    "modules:server:feature-screenshot",
-    "modules:server:feature-behavior",
-    "modules:client:agent",
-    "modules:client:mod-sensor",
-    "modules:client:self-check",
-    "modules:client:window-capture",
-    "test-support:codec",
-    "test-support:session",
-    "test-support:platform-contract",
+    "test-support:session-harness",
 )
 
-publicModules.forEach { include(":$it") }
+modules.forEach { include(":$it") }
 
-// Platform builds under platforms/ are intentionally independent Gradle builds.
-// Do not include them here: Forge, NeoForge and Fabric evolve their toolchains
-// at different rates and must be allowed to fail or upgrade independently.
+// Platform builds stay independent so loader toolchains can evolve separately.

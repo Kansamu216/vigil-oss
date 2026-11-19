@@ -1,20 +1,19 @@
 # 分发产物规则
 
-每个平台分别构建服务端与客户端产物，命名包含：
+每个平台分别构建服务端与客户端产物：
 
-`vigil-<side>-<loader>-<minecraft>-<version>-<channel>.jar`
+`vigil-<side>-<loader>-<minecraft>-<version>.jar`
 
 - `side`：`server` / `client`
-- `loader`：`forge` / `neoforge` / `fabric`
-- `minecraft`：`1.20.1`、`1.20.4`、`1.21.1`
-- `channel`：`private` / `oss`
+- `loader`：当前为 `neoforge`
+- `minecraft`：当前为 `1.21.1`
 
-公共核心不作为玩家需要额外安装的 Mod。客户端共享代码在打包时确定性重定位到 `...client.internal.*`，避免与服务端 jar 形成 split package。
+公共模块不作为玩家需要额外安装的 Mod。客户端共享代码在打包时确定性重定位到 `...client.internal.*`，避免与服务端 jar 形成 split package。
 
-M0 必须先用空 Mod 验证：
+每个产物必须验证：
 
-1. 双端启动。
+1. 双端构建与启动。
 2. channel/payload 注册。
-3. 包内容与包名隔离。
-4. Kotlin 无关、voidkit_core 无关。
-5. 公开包不含任何私有模块或私有依赖坐标。
+3. metadata 与包内容完整。
+4. 客户端字节码引用已随重定位改写。
+5. 不包含密钥、玩家数据或加载器/Minecraft 类。
