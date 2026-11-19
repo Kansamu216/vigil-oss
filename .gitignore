@@ -1,0 +1,26 @@
+# Ignore build output and local-only runtime data.
+.gradle/
+build/
+**/build/
+out/
+.idea/
+*.iml
+.vscode/
+.DS_Store
+
+# Development server/client runs.
+run/
+runs/
+logs/
+
+# Secrets and player data must never enter the repository.
+*.pem
+*.key
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+screenshots/
+captures/
+config/local/
