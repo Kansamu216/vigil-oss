@@ -1,5 +1,8 @@
 val productGroup = "io.github.kansamu216.vigil"
 val productVersion = "0.1.0-dev.0"
+val sharedLibs = extensions
+    .getByType(org.gradle.api.artifacts.VersionCatalogsExtension::class.java)
+    .named("libs")
 
 subprojects {
     group = productGroup
@@ -29,6 +32,6 @@ subprojects {
     }
 
     dependencies {
-        add("testImplementation", libs.junit.jupiter)
+        add("testImplementation", sharedLibs.findLibrary("junit-jupiter").get())
     }
 }
