@@ -35,6 +35,12 @@ public final class ProtocolLimits {
     /** 截图分片总字节上限。 */
     public static final int MAX_SCREEN_TOTAL_BYTES = 8 * 1024 * 1024;
 
+    /** 单个截图分片的字节上限；留出信封与分片头的余量，避免撞上 payload 上限。 */
+    public static final int MAX_SCREEN_CHUNK_BYTES = 24 * 1024;
+
+    /** 截图单边像素上限，超出即拒绝，不做缩放。 */
+    public static final int MAX_SCREEN_DIMENSION = 16384;
+
     private ProtocolLimits() {
     }
 }

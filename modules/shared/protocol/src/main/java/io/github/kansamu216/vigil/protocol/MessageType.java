@@ -27,7 +27,10 @@ public enum MessageType {
     SCREEN_REQUEST(0x0101),
 
     /** 截图分片。 */
-    SCREEN_CHUNK(0x0102);
+    SCREEN_CHUNK(0x0102),
+
+    /** 截图决定：客户端同意（附图像元数据）或拒绝（附原因码）。 */
+    SCREEN_DECISION(0x0103);
 
     private final int id;
 
