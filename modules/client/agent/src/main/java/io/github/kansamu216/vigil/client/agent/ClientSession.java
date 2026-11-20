@@ -24,8 +24,7 @@ import java.security.PublicKey;
 /**
  * 客户端侧会话状态机。
  *
- * <p>顺序固定：检查信任锚 → 解析挑战公钥 → 指纹比对 → 验签 → 检查有效期 → 应答。
- * 没有预置指纹时直接拒绝，不做 TOFU 自动接受，避免中间人替换服务器公钥。</p>
+ * <p>按固定顺序校验挑战并建立会话：信任锚、签名、有效期、应答。</p>
  */
 public final class ClientSession {
 
@@ -52,7 +51,7 @@ public final class ClientSession {
     }
 
     /**
-     * 校验挑战并记录已验证会话。调用方必须只在成功后构造应答。
+     * 校验挑战并建立会话；只有成功后才能构造应答。
      */
     public void acceptChallenge(Challenge challenge, byte[] signature, long nowMillis)
             throws ClientHandshakeException {

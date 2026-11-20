@@ -13,8 +13,7 @@ import org.slf4j.LoggerFactory;
 /**
  * 协议通道注册与最小收发链路。
  *
- * <p>这里只做与加载器相关的注册和线程边界处理，不含会话、判定或处置逻辑。
- * 通道标识以 {@link VigilChannels} 为准，避免各平台各写一份常量。</p>
+ * <p>只处理加载器注册与线程边界；通道标识以 {@link VigilChannels} 为准。</p>
  */
 public final class VigilChannel {
 
@@ -39,8 +38,7 @@ public final class VigilChannel {
     }
 
     /**
-     * 收到对端事实报文。只做版本一致性校验和计数，
-     * 不在此处推进会话状态，也不触发任何处置。
+     * 收到对端事实报文，只做版本校验与计数。
      */
     private static void handlePing(VigilPingPayload payload, IPayloadContext context) {
         RECEIVED.incrementAndGet();
@@ -50,7 +48,7 @@ public final class VigilChannel {
         }
     }
 
-    /** 供契约测试和启动 smoke test 使用的只读计数。 */
+    /** 只读计数，供测试使用。 */
     public static long receivedCount() {
         return RECEIVED.get();
     }

@@ -6,7 +6,7 @@ import io.github.kansamu216.vigil.server.session.AuthOutcome;
 /**
  * 一次认证应答的处理结果：握手结论 + 服务端判定。
  *
- * <p>握手失败时 {@code verdict} 为 null——失败不是证据，不产生判定。</p>
+ * <p>握手失败时 {@code verdict} 为 null。</p>
  */
 public final class AuthEvaluation {
 

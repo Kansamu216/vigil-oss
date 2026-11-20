@@ -22,10 +22,8 @@ import java.util.UUID;
 /**
  * 挑战下发与握手校验。
  *
- * <p>顺序固定：限流 → 会话存在 → 状态 → 失败次数 → nonce → 有效期 → 解会话密钥
- * → 解报告 → 报告与挑战绑定校验。任何一步失败都只增加失败计数，不进入判定。</p>
- *
- * <p>本类不做判定、不落库、不踢人：它只回答“这次握手是否成立”。</p>
+ * <p>按顺序校验限流、会话、状态、失败次数、nonce、有效期与报文绑定。
+ * 本类只回答“这次握手是否成立”。</p>
  */
 public final class HandshakeService {
 
@@ -60,7 +58,7 @@ public final class HandshakeService {
     }
 
     /**
-     * 为玩家签发一次性挑战。玩家重复进服会得到新会话，旧会话自然过期。
+     * 为玩家签发一次性挑战；重复进服会得到新会话。
      */
     public SignedChallenge issueChallenge(String playerId, long nowMillis) {
         if (playerId == null || playerId.isEmpty()) {
@@ -93,8 +91,7 @@ public final class HandshakeService {
         if (record == null) {
             return AuthOutcome.failed(AuthFailure.UNKNOWN_SESSION);
         }
-        // 同一时刻只有一个线程能推进某个会话的状态与序号；其他会话仍可并行。
-        // 并发重放同一 AUTH 帧时，只有第一个能通过状态检查。
+        // 每个会话的状态与序号串行推进。
         synchronized (record) {
             return authenticateLocked(record, request, nowMillis);
         }
@@ -170,7 +167,7 @@ public final class HandshakeService {
         }
         Secrets.wipe(plain);
 
-        // 报告必须绑定本次挑战与本次会话的玩家，防止跨会话搬运报告。
+        // 报告绑定本次挑战与会话玩家。
         if (!report.nonce().equals(challenge.nonce())
                 || !report.playerId().equals(record.playerId())) {
             Secrets.wipe(sessionKey);
@@ -183,7 +180,7 @@ public final class HandshakeService {
         return AuthOutcome.success(AuthResult.of(challenge, report, sessionKey));
     }
 
-    /** 保活：只刷新活动时间，序号必须单调，复用序号视为重放。 */
+    /** 保活：刷新活动时间，并检查序号单调性。 */
     public boolean keepalive(String sessionId, long sequence, long nowMillis) {
         SessionRecord record = sessions.get(sessionId);
         if (record == null) {

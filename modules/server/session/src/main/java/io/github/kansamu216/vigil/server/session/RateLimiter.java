@@ -7,7 +7,7 @@ import java.util.Map;
 /**
  * 固定窗口限流，用于握手与截图请求。
  *
- * <p>表本身有上限：超过上限先淘汰最久未使用的键，避免被大量伪造 sessionId 撑爆内存。</p>
+ * <p>表有上限，超过时淘汰最久未使用的键。</p>
  */
 public final class RateLimiter {
 

@@ -30,11 +30,8 @@ import java.util.Optional;
 /**
  * 服务端运行时装配。
  *
- * <p>一条完整链路：进服 → 封禁检查 → 下发挑战 → 校验应答 → 判定 → 审计 → 回调处置。
- * 所有方法都不做 IO 阻塞以外的平台动作，平台适配层只负责把字节收发给玩家。</p>
- *
- * <p>失败语义：协议失败只记审计与计数；存储故障进入降级（不产生封禁），
- * 绝不把内部故障当作作弊证据。</p>
+ * <p>链路：进服检查 → 挑战下发 → 应答校验 → 判定 → 审计 → 处置回调。
+ * 平台适配层只负责字节收发与动作执行。</p>
  */
 public final class GuardRuntime implements Closeable {
 
@@ -91,7 +88,7 @@ public final class GuardRuntime implements Closeable {
     }
 
     /**
-     * 玩家进服。已在封禁中的玩家直接拒绝，不下发挑战——避免给被封禁者继续试探的机会。
+     * 玩家进服。已在封禁中的玩家直接拒绝。
      */
     public JoinOutcome onPlayerJoin(String playerId, long nowMillis) {
         Optional<BanRecord> active = safeActiveBan(playerId, nowMillis);
@@ -109,7 +106,7 @@ public final class GuardRuntime implements Closeable {
     }
 
     /**
-     * 处理一帧认证应答。协议层失败与握手失败都只记审计，不产生处置。
+     * 处理一帧认证应答。失败只记审计，不产生处置。
      */
     public AuthEvaluation onAuthFrame(String playerId, byte[] frame, long nowMillis) {
         Envelope envelope;
@@ -167,7 +164,7 @@ public final class GuardRuntime implements Closeable {
             appendAudit(EVENT_BAN, playerId, reason, nowMillis);
             listener.onActionRequired(playerId, VerdictAction.BAN, reason);
         } catch (StorageException e) {
-            // 存储故障不得静默变成“已封禁”，也不能反过来当成干净。
+            // 存储故障进入降级，不产生封禁。
             appendAudit(EVENT_BAN, playerId, "storage-failure", nowMillis);
             listener.onActionRequired(playerId, VerdictAction.ALERT, "ban storage failure");
         }
@@ -184,7 +181,7 @@ public final class GuardRuntime implements Closeable {
             bans.purgeExpired(nowMillis);
             audit.purgeOlderThan(nowMillis - config.auditRetentionMillis());
         } catch (StorageException e) {
-            // 维护失败只影响清理，不影响在线判定。
+            // 维护失败只影响清理。
             appendAudit("VIGIL-MAINTENANCE-FAILED", null, e.getMessage(), nowMillis);
         }
     }
@@ -201,7 +198,7 @@ public final class GuardRuntime implements Closeable {
         try {
             return bans.activeBan(playerId, nowMillis);
         } catch (StorageException e) {
-            // 存储不可用时放行进服，但会在审计里留下记录：不以故障惩罚玩家。
+            // 存储不可用时放行进服，并记录审计。
             appendAudit("VIGIL-STORAGE-DEGRADED", playerId, "join-check-skipped", nowMillis);
             return Optional.empty();
         }
@@ -211,7 +208,7 @@ public final class GuardRuntime implements Closeable {
         try {
             audit.append(eventCode, playerId, detail, nowMillis);
         } catch (StorageException e) {
-            // 审计写失败不得中断判定链路，也不得伪造成功。
+            // 审计写失败不中断判定链路。
             listener.onActionRequired(playerId, VerdictAction.ALERT, "audit storage failure");
         }
     }

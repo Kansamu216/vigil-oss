@@ -19,8 +19,7 @@ import java.nio.charset.Charset;
 import java.security.PublicKey;
 
 /**
- * 测试用参考客户端：薄封装 {@link ClientSession}，并额外断言服务端公钥与
- * 测试持有的密钥一致。产品客户端不使用本类。
+ * 测试用参考客户端：封装 {@link ClientSession} 并核对服务端公钥。
  */
 public final class ReferenceClient {
 
@@ -61,8 +60,7 @@ public final class ReferenceClient {
     }
 
     /**
-     * 测试用应答：使用挑战签发时间作为“当前时间”，避免使用真实时钟导致
-     * 固定测试时间戳被判定过期。
+     * 测试用应答：使用挑战签发时间作为当前时间。
      */
     public AuthRequest respond(Challenge challenge, ClientReport report, long sequence)
             throws ClientHandshakeException {
@@ -70,8 +68,7 @@ public final class ReferenceClient {
     }
 
     /**
-     * 测试专用：不经过信任锚校验，直接用给定公钥构造应答，
-     * 用于构造“跨交付/错误公钥”这类服务端必须拒绝的样本。
+     * 测试专用：使用给定公钥构造应答，用于密钥不匹配的用例。
      */
     public static AuthRequest respondWithKey(PublicKey key, Challenge challenge, ClientReport report)
             throws CryptoException {

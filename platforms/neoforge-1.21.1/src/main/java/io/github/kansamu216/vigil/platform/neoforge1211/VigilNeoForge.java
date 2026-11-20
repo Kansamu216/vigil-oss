@@ -8,10 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * NeoForge 1.21.1 入口。
- *
- * <p>M0 阶段职责只有三件事：被加载器识别、注册协议通道、暴露平台事实。
- * 检测、判定、处置必须在服务端业务模块内实现，不得写在此处。</p>
+ * NeoForge 1.21.1 入口：加载识别与通道注册。
  */
 @Mod(VigilNeoForge.MOD_ID)
 public final class VigilNeoForge {

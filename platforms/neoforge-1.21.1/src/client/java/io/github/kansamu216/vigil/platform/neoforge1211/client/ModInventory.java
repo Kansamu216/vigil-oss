@@ -14,8 +14,7 @@ import net.neoforged.neoforgespi.language.IModInfo;
 /**
  * 在后台线程构建 Mod 清单快照。
  *
- * <p>不在客户端主线程或网络线程算哈希；单个 Mod 文件失败只记录一条采集观测，
- * 不阻断整份报告。</p>
+ * <p>在后台线程计算摘要；单个文件失败只记录观测。</p>
  */
 final class ModInventory {
 

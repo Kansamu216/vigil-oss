@@ -3,8 +3,7 @@ package io.github.kansamu216.vigil.protocol;
 /**
  * 消息类型。
  *
- * <p>id 一经发布不得复用；删除的消息保留占位，防止旧客户端被当成新语义解析。
- * 新增消息必须分配唯一 id，未实现的消息不得注册。</p>
+ * <p>id 发布后不复用；新消息分配唯一 id。</p>
  */
 public enum MessageType {
 
@@ -17,7 +16,7 @@ public enum MessageType {
     /** 会话保活。 */
     KEEPALIVE(0x0003),
 
-    /** M0 连通性探测，仅用于验证双端注册。 */
+    /** 连通性探测。 */
     PING(0x0004),
 
     /** 服务端下发判定结果（仅告知，不含处置凭据）。 */

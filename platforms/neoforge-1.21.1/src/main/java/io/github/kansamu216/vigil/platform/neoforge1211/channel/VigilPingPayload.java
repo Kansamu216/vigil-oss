@@ -8,10 +8,7 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 
 /**
- * 通道上最小的事实报文，用于 M0 验证双端注册与收发链路。
- *
- * <p>只携带协议版本与单调序号，不携带玩家标识、文件路径或环境数据。
- * 报文长度由字段类型固定，没有可变长字符串或列表，因此不存在解码放大面。</p>
+ * 通道上的连通性报文，只携带协议版本与单调序号；长度固定。
  */
 public record VigilPingPayload(int protocolVersion, long sequence) implements CustomPacketPayload {
 

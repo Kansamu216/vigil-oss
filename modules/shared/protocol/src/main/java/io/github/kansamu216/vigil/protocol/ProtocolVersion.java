@@ -5,7 +5,7 @@ package io.github.kansamu216.vigil.protocol;
  */
 public final class ProtocolVersion {
 
-    /** 当前实现的 major。跨 major 必须走兼容/降级模式，不得静默按旧语义解析。 */
+    /** 当前实现的 major。 */
     public static final int MAJOR = 1;
 
     /** 当前实现的 minor。新增可选字段时递增。 */

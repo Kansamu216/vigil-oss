@@ -8,9 +8,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 /**
- * Mod 文件流式哈希。
- *
- * <p>不把 jar 读入内存；供客户端后台线程在进服前预计算。</p>
+ * Mod 文件流式摘要，供客户端后台线程使用。
  */
 public final class ModFileHasher {
 

@@ -6,8 +6,7 @@ import java.util.Arrays;
 /**
  * 随机数与秘密擦除。
  *
- * <p>{@link SecureRandom} 初始化成本高，这里复用单例；密钥材料用完必须显式擦除。
- * 单例只用于取随机字节，不保存任何秘密。</p>
+ * <p>复用 {@link SecureRandom} 单例；密钥材料用完应显式擦除。</p>
  */
 public final class Secrets {
 
@@ -25,7 +24,7 @@ public final class Secrets {
         return out;
     }
 
-    /** 覆盖数组内容。调用方仍需丢弃引用，本方法只降低被转储的概率。 */
+    /** 覆盖数组内容；调用方仍需丢弃引用。 */
     public static void wipe(byte[] secret) {
         if (secret != null) {
             Arrays.fill(secret, (byte) 0);
@@ -33,7 +32,7 @@ public final class Secrets {
     }
 
     /**
-     * 恒定时间比较，避免通过响应时间区分“前缀相同”和“完全不同”。
+     * 按恒定时间比较字节数组。
      */
     public static boolean constantTimeEquals(byte[] left, byte[] right) {
         if (left == null || right == null || left.length != right.length) {

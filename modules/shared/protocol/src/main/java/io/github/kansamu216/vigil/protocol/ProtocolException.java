@@ -3,7 +3,7 @@ package io.github.kansamu216.vigil.protocol;
 /**
  * 协议层失败，带可审计的错误码。
  *
- * <p>错误码会进入日志与指标，但不得把内部堆栈或密钥材料带给玩家。
+ * <p>错误码用于日志与指标，不携带密钥材料。
  */
 public class ProtocolException extends Exception {
 

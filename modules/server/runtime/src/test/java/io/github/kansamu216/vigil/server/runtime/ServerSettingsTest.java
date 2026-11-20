@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 /**
- * 配置加载：默认文件、clamp、非法数值与数据库路径边界。
+ * 配置加载：默认文件、范围约束与数据库路径边界。
  */
 class ServerSettingsTest {
 

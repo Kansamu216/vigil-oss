@@ -14,9 +14,8 @@ import java.util.Properties;
 /**
  * 服务端配置。
  *
- * <p>首次启动写入默认文件；非法数值会被 clamp 并产生告警，配置文件不会因为
- * 一个笔误让服务端无法启动。数据库文件被限制在数据目录内，拒绝绝对路径和
- * {@code ..} 穿越。</p>
+ * <p>首次启动写入默认文件；非法数值按范围约束处理。
+ * 数据库文件限制在数据目录内。</p>
  */
 public final class ServerSettings {
 
@@ -79,7 +78,7 @@ public final class ServerSettings {
     }
 
     /**
-     * 解析为运行时配置。数据目录在调用时确定，避免把本机绝对路径写进配置文件。
+     * 解析为运行时配置；数据目录在调用时确定。
      */
     public ServerConfig toServerConfig(Path dataDirectory) {
         Path database = resolveDatabase(dataDirectory);

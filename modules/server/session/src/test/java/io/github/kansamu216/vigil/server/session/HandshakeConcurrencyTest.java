@@ -19,7 +19,7 @@ import java.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 
 /**
- * 并发重放回归：同一认证帧被多个线程同时提交时只能成功一次。
+ * 同一认证帧并发提交时只成功一次。
  */
 class HandshakeConcurrencyTest {
 

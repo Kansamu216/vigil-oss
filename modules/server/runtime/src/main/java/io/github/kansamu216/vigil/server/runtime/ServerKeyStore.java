@@ -22,8 +22,7 @@ import java.nio.file.attribute.PosixFilePermission;
 /**
  * 服务端密钥持久化。
  *
- * <p>密钥只在首次启动生成一次；文件损坏或只剩一半时直接失败，不静默重建。
- * 静默重建会让已分发的客户端全部失联，也会掩盖磁盘或权限问题。</p>
+ * <p>密钥只在首次启动生成；文件缺失或损坏时终止启动，不静默重建。</p>
  */
 public final class ServerKeyStore {
 
@@ -80,7 +79,7 @@ public final class ServerKeyStore {
         return keyPair;
     }
 
-    /** 公开给管理员的信任锚指纹；客户端只应信任这个值。 */
+    /** 供管理员分发的信任锚指纹。 */
     public String fingerprint() {
         return fingerprint;
     }
@@ -117,10 +116,9 @@ public final class ServerKeyStore {
                             PosixFilePermission.OTHERS_READ);
             Files.setPosixFilePermissions(path, permissions);
         } catch (UnsupportedOperationException e) {
-            // Windows 等文件系统没有 POSIX 权限模型；不阻断启动，但部署文档要求
-            // 管理员通过 ACL 限制私钥文件访问。
+            // 没有 POSIX 权限模型的文件系统不阻断启动；部署时通过 ACL 限制访问。
         } catch (IOException e) {
-            // 权限收紧失败不改变密钥内容；由启动日志提示管理员检查。
+            // 权限收紧失败不改变密钥内容，只记录提示。
         }
     }
 }

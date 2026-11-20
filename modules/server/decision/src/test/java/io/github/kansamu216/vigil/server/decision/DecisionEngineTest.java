@@ -11,9 +11,7 @@ import io.github.kansamu216.vigil.testsupport.session.Reports;
 import org.junit.jupiter.api.Test;
 
 /**
- * 判定门槛与最小信任回归。
- *
- * <p>重点防止“客户端自报一个高危消息码，就被服务端当成确证证据”。</p>
+ * 判定门槛回归测试。
  */
 class DecisionEngineTest {
 

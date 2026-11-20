@@ -13,8 +13,7 @@ import javax.crypto.spec.PSource;
 /**
  * RSA-2048 OAEP-SHA256 会话密钥包裹。
  *
- * <p>每个交付一份独立密钥对：交付 A 的私钥必须解不开交付 B 包裹的会话密钥，
- * 这条性质由 {@code DeliveryIsolationTest} 之类的用例覆盖，不靠约定。</p>
+ * <p>每次部署使用独立密钥对。</p>
  */
 public final class RsaOaep {
 
@@ -50,7 +49,7 @@ public final class RsaOaep {
     }
 
     /**
-     * 解开会话密钥。不同交付的私钥在这里必然失败，属于预期行为而非故障。
+     * 解开会话密钥；密钥不匹配时返回失败。
      */
     public static byte[] unwrap(PrivateKey privateKey, byte[] wrappedKey) throws CryptoException {
         try {

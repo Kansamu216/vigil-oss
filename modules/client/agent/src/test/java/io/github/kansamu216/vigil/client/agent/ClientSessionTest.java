@@ -18,7 +18,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /**
- * 客户端信任锚与挑战校验：错误指纹、坏签名、过期和未验签都必须拒绝。
+ * 客户端信任锚与挑战校验。
  */
 class ClientSessionTest {
 

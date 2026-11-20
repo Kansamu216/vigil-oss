@@ -37,15 +37,13 @@ val clientInternalNamespace = "$clientInternalRoot.protocol"
 val platformPackagePrefix = "io.github.kansamu216.vigil.platform."
 val serverPackagePrefix = "io.github.kansamu216.vigil.platform.neoforge1211.server."
 
-// Separate content sets: the client must never ship server runtime or server
-// adapter classes.
+// Separate source sets for server and client artifacts.
 val sharedCore: Configuration by configurations.creating
 val serverCore: Configuration by configurations.creating
 val clientCore: Configuration by configurations.creating
 val devCore: Configuration by configurations.creating
 
-// Server-only sources are compiled into the server jar and loaded only on a
-// dedicated server through @EventBusSubscriber(dist = DEDICATED_SERVER).
+// Server-only sources are compiled into the server jar only.
 val serverSourceSet = sourceSets.create("server") {
     java.srcDir("src/server/java")
     resources.srcDir("src/server/resources")
@@ -84,9 +82,7 @@ dependencies {
     serverCore("$coreGroup:server-runtime:$coreVersion")
     devCore("$coreGroup:shared-protocol:$coreVersion")
     devCore("$coreGroup:server-runtime:$coreVersion")
-    // Dev runs load every registered source set in one JVM, so the client
-    // agent must also be present for the dedicated server dev launch to load
-    // the (unused) client subscriber class. Production server jar excludes it.
+    // Dev runs share one classloader; client core is included for dev runs only.
     devCore("$coreGroup:client-agent:$coreVersion")
     devCore("$coreGroup:client-mod-sensor:$coreVersion")
 }
@@ -149,8 +145,7 @@ val serverJar = tasks.named<ShadowJar>("shadowJar") {
     applySidePackaging("server", serverCore, serverSourceSet)
 }
 
-// The client jar relocates shared core classes so a client and a server jar can
-// never contribute the same package to one class loader.
+// Shared core classes are relocated in the client jar.
 val clientJar = tasks.register<ShadowJar>("clientJar") {
     applySidePackaging("client", clientCore, clientSourceSet)
     sharedNamespaces.forEach { namespace ->

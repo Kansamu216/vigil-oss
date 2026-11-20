@@ -5,8 +5,7 @@ import io.github.kansamu216.vigil.server.decision.DecisionPolicy;
 /**
  * 运行时配置。
  *
- * <p>加载后统一 clamp：非法值不会让服务器崩，也不会静默变成危险默认。
- * reload 使用整体替换（原子快照），避免半新半旧。</p>
+ * <p>加载后统一约束数值范围；重新加载使用原子快照。</p>
  */
 public final class ServerConfig {
 
@@ -36,7 +35,7 @@ public final class ServerConfig {
         this.decisionPolicy = decisionPolicy == null ? DecisionPolicy.defaults() : decisionPolicy;
     }
 
-    /** 首版默认：挑战 20 秒、空闲 120 秒、审计保留 30 天、4096 会话、只告警。 */
+    /** 默认值：挑战 20 秒、空闲 120 秒、审计保留 30 天、4096 会话、只告警。 */
     public static ServerConfig defaults(String databasePath) {
         return new ServerConfig(
                 20_000L,

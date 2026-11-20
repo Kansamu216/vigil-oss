@@ -25,7 +25,7 @@ import java.security.KeyPair;
 import org.junit.jupiter.api.Test;
 
 /**
- * 端到端业务闭环：进服 → 挑战 → 应答 → 判定 → 审计 → 处置，全在纯 JVM 下完成。
+ * 进服到处置的完整链路测试。
  */
 class GuardRuntimeTest {
 
@@ -107,7 +107,7 @@ class GuardRuntimeTest {
             verifyClient(client, challenge, join.challengeFrame());
             AuthRequest request = client.respond(challenge, report, 0L);
 
-            // 即使打开全部自动处置，客户端也只能产生观测级证据。
+            // 客户端数据不产生自动处置。
             AuthEvaluation evaluation = runtime.onAuthFrame(PLAYER, authFrame(request), NOW + 100L);
             assertEquals(VerdictAction.ALERT, evaluation.verdict().action());
             assertEquals(0, runtime.activeBanCount(NOW + 200L));

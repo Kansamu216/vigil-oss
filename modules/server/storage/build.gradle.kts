@@ -1,4 +1,4 @@
-// 存储层：SQLite、migration 与 Repository。SQLite 只允许出现在这个模块。
+// 存储层：SQLite 迁移与仓储。
 dependencies {
     api(project(":modules:shared:model"))
     implementation(libs.sqlite.jdbc)

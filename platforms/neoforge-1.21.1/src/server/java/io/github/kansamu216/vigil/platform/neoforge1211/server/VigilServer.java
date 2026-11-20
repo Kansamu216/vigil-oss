@@ -34,13 +34,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * 服务端适配层：把加载器生命周期接到纯 Java 运行时。
+ * 服务端适配层：把加载器生命周期接到运行时。
  *
- * <p>只在专用服务端注册；客户端 jar 不包含这些类。网络线程只负责投递字节，
- * 解码、验签、解密、判定和数据库写入在单一有界工作线程执行，处置回到服务端线程。</p>
+ * <p>网络线程只投递字节；解码、判定和存储由有界工作线程执行。</p>
  */
-// 本类只打进 server jar；客户端 jar 不包含这些类。集成服务器由运行时判空
-// 保护：只有专用服务端会打开数据库与工作线程。
+// 本类只打进 server jar；只有专用服务端打开数据库与工作线程。
 @EventBusSubscriber(modid = VigilNeoForge.MOD_ID, bus = EventBusSubscriber.Bus.GAME)
 public final class VigilServer {
 
@@ -82,7 +80,7 @@ public final class VigilServer {
             runtime = null;
             worker = null;
             VigilNetwork.setSink(null);
-            // 校验不可用时服务器继续运行，但必须明确记录，不能假装已保护。
+            // 校验不可用时服务器继续运行，并记录状态。
             LOGGER.error("[VIGIL-SERVER-002] runtime unavailable, guard disabled", e);
         }
     }
@@ -148,7 +146,7 @@ public final class VigilServer {
     }
 
     /**
-     * 网络线程入口：只做类型检查与投递，绝不在这里解码或查库。
+     * 网络线程入口：只做类型检查与投递。
      */
     private static void onFrame(Player player, byte[] frame) {
         if (!(player instanceof ServerPlayer serverPlayer)) {
@@ -169,7 +167,7 @@ public final class VigilServer {
                         LOGGER.warn("[VIGIL-FRAME-001] handshake rejected player={}", playerId);
                     }
                 } catch (RuntimeException e) {
-                    // 任何内部异常只记录，不影响服务器主线程，也不作为证据。
+                    // 内部异常只记录，不影响服务器主线程。
                     LOGGER.warn("[VIGIL-FRAME-002] frame handling failed player={}", playerId, e);
                 }
             });

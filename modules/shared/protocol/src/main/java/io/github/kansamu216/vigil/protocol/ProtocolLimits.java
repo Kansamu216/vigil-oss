@@ -3,15 +3,14 @@ package io.github.kansamu216.vigil.protocol;
 /**
  * 协议硬上限。
  *
- * <p>所有长度、列表、字符串和分片都必须受这里约束；新增字段时先在这里定上限，
- * 再写编解码，避免出现无界读取。</p>
+ * <p>所有长度、列表、字符串与分片均受此约束。</p>
  */
 public final class ProtocolLimits {
 
     /** 信封固定头长度：version(2)+messageId(2)+direction(1)+sequence(8)+payloadLen(2)=15。 */
     public static final int ENVELOPE_HEADER_BYTES = 2 + 2 + 1 + 8 + 2;
 
-    /** payloadLen 字段在帧内的起始偏移，测试与工具需要按常量取值而不是硬编码。 */
+    /** payloadLen 字段在帧内的起始偏移。 */
     public static final int PAYLOAD_LENGTH_OFFSET = 2 + 2 + 1 + 8;
 
     /** 单个 payload 上限，超出即拒绝，不尝试分片。 */

@@ -13,7 +13,7 @@ import java.util.List;
 /**
  * 客户端报告编解码。
  *
- * <p>两个列表都先读数量再按数量读元素，数量超上限直接拒绝，绝不据此预分配大数组。</p>
+ * <p>列表先读数量再读元素，数量受协议上限约束。</p>
  */
 public final class ReportPayload {
 

@@ -8,7 +8,7 @@ import java.security.Signature;
 /**
  * 挑战签名与校验（SHA256withRSA）。
  *
- * <p>客户端必须用预置的服务器公钥指纹验证签名，不得信任包内自带的公钥。</p>
+ * <p>签名校验使用已核对指纹的服务器公钥。</p>
  */
 public final class ChallengeSignature {
 

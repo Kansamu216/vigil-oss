@@ -6,8 +6,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 /**
  * 会话帧转交点。
  *
- * <p>客户端与服务端共用同一个 payload 注册，但只有服务端会安装 {@link FrameSink}。
- * 客户端未接入 Agent 时收到帧会被忽略，不会误解析或误判。</p>
+ * <p>两端共用同一 payload 注册；只有服务端安装 {@link FrameSink}。</p>
  */
 public final class VigilNetwork {
 

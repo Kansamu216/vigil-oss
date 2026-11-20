@@ -83,7 +83,7 @@ public final class Envelope {
 
     @Override
     public String toString() {
-        // 不打印 payload：里面可能有报告内容，不能进日志。
+        // 不打印 payload。
         return "Envelope{version=" + version + ", type=" + type
                 + ", direction=" + direction + ", sequence=" + sequence
                 + ", payloadLen=" + payload.length + "}";

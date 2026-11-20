@@ -3,7 +3,7 @@ package io.github.kansamu216.vigil.model;
 /**
  * 服务端签发的挑战。
  *
- * <p>单次使用：nonce 被消费后立即失效；过期同样失效，不因重连延长。</p>
+ * <p>单次使用：nonce 被消费后失效，过期后同样失效。</p>
  */
 public final class Challenge {
 

@@ -7,11 +7,7 @@ import java.util.Random;
 import org.junit.jupiter.api.Test;
 
 /**
- * 解码器畸形输入回归。
- *
- * <p>要求：任意输入只能得到 {@link ProtocolException} 或成功解析，
- * 不允许出现其他异常（尤其是数组越界、空指针或整数溢出）。
- * 单次测试 10,000 个变异样本，作为 PR 门禁的最小值。</p>
+ * 解码器对变异输入的容错测试，单次测试 10,000 个样本。
  */
 class EnvelopeFuzzTest {
 

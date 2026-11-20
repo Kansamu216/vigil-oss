@@ -7,7 +7,7 @@ import java.security.PublicKey;
 /**
  * 公钥指纹（SHA-256，小写十六进制）。
  *
- * <p>客户端只持指纹，不持公钥本身；指纹不同即视为不同交付，直接拒绝连接。</p>
+ * <p>指纹用于核对服务器公钥；不匹配时拒绝连接。</p>
  */
 public final class KeyFingerprint {
 

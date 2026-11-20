@@ -40,8 +40,7 @@ public final class Database implements Closeable {
     }
 
     private static Database open(String url) throws SQLException {
-        // 驱动由本模块显式加载：Mod 环境下类可能来自重定位/展开后的目录，
-        // 不能依赖 java.sql.Driver 的 ServiceLoader 自动发现。
+        // 显式加载驱动，覆盖 Mod 环境下的重定位类路径。
         try {
             Class.forName("org.sqlite.JDBC");
         } catch (ClassNotFoundException e) {

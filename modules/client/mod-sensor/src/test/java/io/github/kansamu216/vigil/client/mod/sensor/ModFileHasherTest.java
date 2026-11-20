@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 /**
- * Mod 文件哈希：与标准测试向量一致，不存在文件时报错。
+ * Mod 文件摘要与标准测试向量一致；文件不存在时报错。
  */
 class ModFileHasherTest {
 

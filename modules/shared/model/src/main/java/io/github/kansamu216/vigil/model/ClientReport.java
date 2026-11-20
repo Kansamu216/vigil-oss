@@ -7,7 +7,7 @@ import java.util.List;
 /**
  * 客户端一次上报的内容：事实集合，不含最终结论。
  *
- * <p>必须绑定当次挑战的 nonce，否则整份报告作废；字段全部有上限。</p>
+ * <p>报告绑定当次挑战的 nonce；字段有上限。</p>
  */
 public final class ClientReport {
 
@@ -49,7 +49,7 @@ public final class ClientReport {
         }
         if (fingerprintHash == null
                 || (!fingerprintHash.isEmpty() && fingerprintHash.length() != 64)) {
-            // 客户端指纹是可选的；未启用采集时发送空串，而不是伪造一个哈希。
+            // 未采集指纹时发送空串。
             throw new IllegalArgumentException("fingerprint must be empty or 64 hex chars");
         }
         this.protocolVersion = protocolVersion;

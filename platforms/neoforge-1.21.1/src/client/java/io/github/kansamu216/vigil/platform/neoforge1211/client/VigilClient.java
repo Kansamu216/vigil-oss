@@ -36,9 +36,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * 客户端适配层：读取信任锚，验证挑战，构建报告并回发 AUTH 帧。
+ * 客户端适配层：读取信任锚、校验挑战、构建并回发报告。
  *
- * <p>没有预置指纹时只记录观察到的指纹并停止，不自动信任首次连接。</p>
+ * <p>未配置信任锚时不建立会话。</p>
  */
 @EventBusSubscriber(modid = VigilNeoForge.MOD_ID, bus = EventBusSubscriber.Bus.MOD)
 public final class VigilClient {

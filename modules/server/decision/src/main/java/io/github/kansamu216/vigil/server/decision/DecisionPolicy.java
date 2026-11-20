@@ -3,8 +3,7 @@ package io.github.kansamu216.vigil.server.decision;
 /**
  * 判定阈值。
  *
- * <p>默认值偏保守：告警阈值低、处置阈值高，自动封禁默认关闭。
- * 修改阈值必须附样本依据，不能为了让单个案例通过而临时调低。</p>
+ * <p>默认只记录告警；调整阈值需有部署依据。</p>
  */
 public final class DecisionPolicy {
 
@@ -36,7 +35,7 @@ public final class DecisionPolicy {
         this.autoKickEnabled = autoKickEnabled;
     }
 
-    /** 首版默认策略：只告警，不自动处置。 */
+    /** 默认策略：只告警，不自动处置。 */
     public static DecisionPolicy defaults() {
         return new DecisionPolicy(20, 50, 70, 90, false, false);
     }

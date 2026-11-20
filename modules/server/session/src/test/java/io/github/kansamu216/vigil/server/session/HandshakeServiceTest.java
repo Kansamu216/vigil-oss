@@ -16,10 +16,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /**
- * 握手状态机的正常路径与全部失败分支。
- *
- * <p>失败分支必须能区分原因：这些原因会进入审计与指标，
- * 但绝不能被当成作弊证据。</p>
+ * 握手状态机的正常路径与失败分支。
  */
 class HandshakeServiceTest {
 
@@ -167,7 +164,7 @@ class HandshakeServiceTest {
 
         AuthOutcome outcome = service.authenticate(request, NOW + 1L);
         assertTrue(outcome.isSuccess());
-        // 握手层不产生结论：报告里只有事实。
+        // 握手层只返回协议结论。
         assertEquals(1, outcome.result().report().observations().size());
         outcome.result().wipe();
     }

@@ -1,7 +1,7 @@
 package io.github.kansamu216.vigil.model;
 
 /**
- * 处置动作。由服务端 decision 产生，客户端不参与选择。
+ * 处置动作，由服务端判定流程产生。
  */
 public enum VerdictAction {
 
@@ -17,6 +17,6 @@ public enum VerdictAction {
     /** 限制玩法（只读、限制交互），需要人工解除。 */
     RESTRICT,
 
-    /** 封禁，必须有确证级证据。 */
+    /** 封禁。 */
     BAN
 }

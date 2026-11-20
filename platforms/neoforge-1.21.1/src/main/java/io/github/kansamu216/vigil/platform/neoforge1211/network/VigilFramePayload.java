@@ -12,8 +12,7 @@ import net.minecraft.resources.ResourceLocation;
 /**
  * 承载协议信封的会话帧。
  *
- * <p>只做字节搬运：不在这里解析业务字段，也不在客户端打印内容。长度上限与核心
- * 协议一致，超限在解码阶段直接拒绝。</p>
+ * <p>只做字节搬运；长度上限与核心协议一致。</p>
  */
 public record VigilFramePayload(byte[] data) implements CustomPacketPayload {
 

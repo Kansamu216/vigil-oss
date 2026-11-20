@@ -10,10 +10,7 @@ import java.security.KeyPair;
 import org.junit.jupiter.api.Test;
 
 /**
- * RSA 包裹、签名与交付隔离。
- *
- * <p>“交付 A 的私钥解不开交付 B 的密钥包”是交付隔离的核心性质，
- * 这里用两个独立密钥对显式验证，而不是只在文档里承诺。</p>
+ * RSA 包裹、签名与密钥隔离。
  */
 class RsaOaepTest {
 

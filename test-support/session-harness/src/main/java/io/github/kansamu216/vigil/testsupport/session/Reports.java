@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 测试样本构造器。只用于测试与本地冒烟，不进入交付包。
+ * 测试样本构造器，不进入交付包。
  */
 public final class Reports {
 

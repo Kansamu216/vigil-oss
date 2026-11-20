@@ -9,16 +9,10 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 /**
- * 证据汇总与处置门槛。
+ * 判定汇总与处置门槛。
  *
- * <p>安全不变式：</p>
- * <ol>
- *   <li>客户端报告只是不可信输入，最多形成观测级证据；</li>
- *   <li>确证/印证只能来自 {@link ServerEvidence}，不能由消息码前缀自证；</li>
- *   <li>统计类信号（{@code STATS_} 前缀）永远不能触发自动处置，最多告警；</li>
- *   <li>采集失败（{@code COLLECT_} 前缀）不是证据；</li>
- *   <li>自动处置只使用服务端评分，封禁还必须达到确证级且显式开启。</li>
- * </ol>
+ * <p>客户端数据作为观测事实；服务端验证结果才能形成判定。
+ * 统计信号不触发自动处置，默认只记录告警。</p>
  */
 public final class DecisionEngine {
 
@@ -31,7 +25,7 @@ public final class DecisionEngine {
         this.policy = policy;
     }
 
-    /** 只有客户端报告时的入口。它永远不会产生确证级判定或自动处置。 */
+    /** 只有客户端报告时的入口；不产生自动处置。 */
     public Verdict evaluate(ClientReport report) {
         return evaluate(report, ServerEvidence.none());
     }
