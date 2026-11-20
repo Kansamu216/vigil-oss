@@ -3,6 +3,7 @@
 ## 0.1.0-dev.3
 
 - 服务端 Mod 白名单校验，仅产生告警。
+- 管理命令：`/vigil status`、`/vigil ban`、`/vigil unban`。
 
 ## 0.1.0-dev.2
 

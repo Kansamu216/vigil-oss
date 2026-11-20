@@ -3,6 +3,7 @@ package io.github.kansamu216.vigil.server.runtime;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.kansamu216.vigil.crypto.RsaOaep;
@@ -114,6 +115,55 @@ class GuardRuntimeTest {
 
             JoinOutcome second = runtime.onPlayerJoin(PLAYER, NOW + 300L);
             assertTrue(second.allowed());
+        }
+    }
+
+    @Test
+    void manualBanBlocksJoinAndUnbanRestores() throws Exception {
+        Path file = Files.createTempDirectory("vigil-rt").resolve("vigil.db");
+        KeyPair keys = RsaOaep.generateKeyPair();
+        RecordingListener listener = new RecordingListener();
+
+        try (GuardRuntime runtime =
+                GuardRuntime.open(configFor(file, DecisionPolicy.defaults()), keys, listener)) {
+            assertTrue(runtime.ban(PLAYER, "tester", "manual", 0L, NOW));
+            assertTrue(runtime.activeBan(PLAYER, NOW + 1L).isPresent());
+            assertFalse(runtime.onPlayerJoin(PLAYER, NOW + 2L).allowed());
+
+            assertEquals(1, runtime.unban(PLAYER, NOW + 3L));
+            assertFalse(runtime.activeBan(PLAYER, NOW + 4L).isPresent());
+            assertTrue(runtime.onPlayerJoin(PLAYER, NOW + 5L).allowed());
+        }
+    }
+
+    @Test
+    void temporaryBanExpires() throws Exception {
+        Path file = Files.createTempDirectory("vigil-rt").resolve("vigil.db");
+        KeyPair keys = RsaOaep.generateKeyPair();
+
+        try (GuardRuntime runtime =
+                GuardRuntime.open(configFor(file, DecisionPolicy.defaults()), keys, new RecordingListener())) {
+            assertTrue(runtime.ban(PLAYER, "tester", "temporary", 1_000L, NOW));
+            assertTrue(runtime.activeBan(PLAYER, NOW + 500L).isPresent());
+            assertFalse(runtime.activeBan(PLAYER, NOW + 1_500L).isPresent());
+            assertTrue(runtime.onPlayerJoin(PLAYER, NOW + 1_600L).allowed());
+        }
+    }
+
+    @Test
+    void invalidManualBanIsRejected() throws Exception {
+        Path file = Files.createTempDirectory("vigil-rt").resolve("vigil.db");
+        KeyPair keys = RsaOaep.generateKeyPair();
+
+        try (GuardRuntime runtime =
+                GuardRuntime.open(configFor(file, DecisionPolicy.defaults()), keys, new RecordingListener())) {
+            assertThrows(IllegalArgumentException.class,
+                    () -> runtime.ban("", "tester", "manual", 0L, NOW));
+            assertThrows(IllegalArgumentException.class,
+                    () -> runtime.ban(PLAYER, "tester", "manual", -1L, NOW));
+            assertThrows(IllegalArgumentException.class,
+                    () -> runtime.unban("", NOW));
+            assertEquals(0, runtime.unban(PLAYER, NOW));
         }
     }
 

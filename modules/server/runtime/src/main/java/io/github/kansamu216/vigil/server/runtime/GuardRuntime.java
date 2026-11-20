@@ -36,6 +36,7 @@ public final class GuardRuntime implements Closeable {
     private static final String EVENT_MOD_POLICY = "VIGIL-MOD-POLICY";
     private static final String EVENT_VERDICT = "VIGIL-VERDICT";
     private static final String EVENT_BAN = "VIGIL-BAN";
+    private static final String EVENT_UNBAN = "VIGIL-UNBAN";
 
     private final ServerConfig config;
     private final SessionRegistry sessions;
@@ -92,6 +93,10 @@ public final class GuardRuntime implements Closeable {
 
     public String publicKeyFingerprint() {
         return handshake.keyFingerprint();
+    }
+
+    public int modPolicyRuleCount() {
+        return modPolicy.ruleCount();
     }
 
     public JoinOutcome onPlayerJoin(String playerId, long nowMillis) {
@@ -163,16 +168,58 @@ public final class GuardRuntime implements Closeable {
         return new AuthEvaluation(outcome, verdict);
     }
 
-    private void applyBan(String playerId, String playerName, String reason, long nowMillis) {
+    public boolean ban(
+            String playerId,
+            String playerName,
+            String reason,
+            long durationMillis,
+            long nowMillis) {
+        if (playerId == null || playerId.isEmpty() || playerId.length() > 64) {
+            throw new IllegalArgumentException("playerId is required and bounded");
+        }
+        if (durationMillis < 0L) {
+            throw new IllegalArgumentException("duration must not be negative");
+        }
+        String safeReason = reason == null ? "" : reason;
+        if (safeReason.length() > 256) {
+            safeReason = safeReason.substring(0, 256);
+        }
+        long expiresAt = 0L;
+        if (durationMillis > 0L) {
+            expiresAt = nowMillis + durationMillis;
+            if (expiresAt < nowMillis) {
+                expiresAt = Long.MAX_VALUE;
+            }
+        }
         try {
-            bans.ban(playerId, playerName, reason, nowMillis, 0L);
-            appendAudit(EVENT_BAN, playerId, reason, nowMillis);
-            listener.onActionRequired(playerId, VerdictAction.BAN, reason);
+            bans.ban(playerId, playerName, safeReason, nowMillis, expiresAt);
+            appendAudit(EVENT_BAN, playerId, safeReason, nowMillis);
+            listener.onActionRequired(playerId, VerdictAction.BAN, safeReason);
+            return true;
         } catch (StorageException e) {
-
             appendAudit(EVENT_BAN, playerId, "storage-failure", nowMillis);
             listener.onActionRequired(playerId, VerdictAction.ALERT, "ban storage failure");
+            return false;
         }
+    }
+
+    public int unban(String playerId, long nowMillis) {
+        if (playerId == null || playerId.isEmpty() || playerId.length() > 64) {
+            throw new IllegalArgumentException("playerId is required and bounded");
+        }
+        try {
+            int changed = bans.unban(playerId);
+            appendAudit(EVENT_UNBAN, playerId, "count=" + changed, nowMillis);
+            return changed;
+        } catch (StorageException e) {
+            appendAudit(EVENT_UNBAN, playerId, "storage-failure", nowMillis);
+            listener.onActionRequired(playerId, VerdictAction.ALERT, "unban storage failure");
+            return 0;
+        }
+    }
+
+    private void applyBan(String playerId, String playerName, String reason, long nowMillis) {
+        ban(playerId, playerName, reason, 0L, nowMillis);
     }
 
     public void onPlayerQuit(String playerId, long nowMillis) {
