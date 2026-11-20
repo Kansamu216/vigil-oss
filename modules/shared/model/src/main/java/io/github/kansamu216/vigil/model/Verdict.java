@@ -1,5 +1,10 @@
 package io.github.kansamu216.vigil.model;
 
+/**
+ * 服务端判定结果。
+ *
+ * <p>只能由服务端 decision 生成；客户端上报的任何字段都不能直接变成 verdict。</p>
+ */
 public final class Verdict {
 
     private final EvidenceLevel level;

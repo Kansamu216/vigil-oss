@@ -1,5 +1,8 @@
 package io.github.kansamu216.vigil.server.session;
 
+/**
+ * 握手结果：成功带 {@link AuthResult}，失败带 {@link AuthFailure}。
+ */
 public final class AuthOutcome {
 
     private final AuthResult result;
@@ -14,6 +17,7 @@ public final class AuthOutcome {
         return new AuthOutcome(result, null);
     }
 
+    /** 运行时与平台适配层需要构造协议层失败结果。 */
     public static AuthOutcome failed(AuthFailure failure) {
         return new AuthOutcome(null, failure);
     }

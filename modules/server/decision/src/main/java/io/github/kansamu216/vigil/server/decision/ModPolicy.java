@@ -13,6 +13,12 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+/**
+ * 服务端 Mod 白名单。
+ *
+ * <p>每行格式：{@code modId [version] [sha256]}，省略项或 {@code *} 表示不限制。
+ * 白名单只用于产生观测与告警，不产生确证级证据，也不会触发自动封禁。</p>
+ */
 public final class ModPolicy {
 
     private static final String WILDCARD = "*";

@@ -6,6 +6,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.junit.jupiter.api.Test;
 
+/**
+ * 信封编解码的正常与畸形用例。
+ */
 class EnvelopeCodecTest {
 
     private static byte[] frameOf(int version, int messageId, int direction, long sequence, byte[] payload) {
@@ -47,7 +50,7 @@ class EnvelopeCodecTest {
     @Test
     void rejectsDeclaredLengthBeyondAvailableBytes() {
         byte[] frame = frameOf(1, MessageType.AUTH.id(), 0, 1L, new byte[] {1, 2, 3});
-
+        // 声明 3 字节但只保留 2 字节。
         byte[] truncated = new byte[frame.length - 1];
         System.arraycopy(frame, 0, truncated, 0, truncated.length);
         ProtocolException error =
@@ -100,7 +103,7 @@ class EnvelopeCodecTest {
     @Test
     void rejectsOversizedPayload() {
         byte[] frame = frameOf(1, MessageType.AUTH.id(), 0, 1L, new byte[0]);
-
+        // 把 payloadLen 改成超过上限的值。
         frame[ProtocolLimits.PAYLOAD_LENGTH_OFFSET] = (byte) 0xFF;
         frame[ProtocolLimits.PAYLOAD_LENGTH_OFFSET + 1] = (byte) 0xFF;
         ProtocolException error =

@@ -1,19 +1,32 @@
 package io.github.kansamu216.vigil.protocol;
 
+/**
+ * 消息类型。
+ *
+ * <p>id 一经发布不得复用；删除的消息保留占位，防止旧客户端被当成新语义解析。
+ * 新增消息必须分配唯一 id，未实现的消息不得注册。</p>
+ */
 public enum MessageType {
 
+    /** 服务端下发签名挑战（含 nonce、公钥指纹、有效期）。 */
     CHALLENGE(0x0001),
 
+    /** 客户端提交会话密钥包裹与加密报告。 */
     AUTH(0x0002),
 
+    /** 会话保活。 */
     KEEPALIVE(0x0003),
 
+    /** M0 连通性探测，仅用于验证双端注册。 */
     PING(0x0004),
 
+    /** 服务端下发判定结果（仅告知，不含处置凭据）。 */
     VERDICT(0x0005),
 
+    /** 截图请求（分片传输的控制消息）。 */
     SCREEN_REQUEST(0x0101),
 
+    /** 截图分片。 */
     SCREEN_CHUNK(0x0102);
 
     private final int id;

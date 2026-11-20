@@ -6,6 +6,9 @@ import io.github.kansamu216.vigil.protocol.ProtocolLimits;
 import io.github.kansamu216.vigil.protocol.WireReader;
 import io.github.kansamu216.vigil.protocol.WireWriter;
 
+/**
+ * 认证应答报文编解码。
+ */
 public final class AuthPayload {
 
     private AuthPayload() {

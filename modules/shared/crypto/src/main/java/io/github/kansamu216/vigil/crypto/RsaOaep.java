@@ -10,6 +10,12 @@ import javax.crypto.Cipher;
 import javax.crypto.spec.OAEPParameterSpec;
 import javax.crypto.spec.PSource;
 
+/**
+ * RSA-2048 OAEP-SHA256 会话密钥包裹。
+ *
+ * <p>每个交付一份独立密钥对：交付 A 的私钥必须解不开交付 B 包裹的会话密钥，
+ * 这条性质由 {@code DeliveryIsolationTest} 之类的用例覆盖，不靠约定。</p>
+ */
 public final class RsaOaep {
 
     public static final int KEY_BITS = 2048;
@@ -43,6 +49,9 @@ public final class RsaOaep {
         }
     }
 
+    /**
+     * 解开会话密钥。不同交付的私钥在这里必然失败，属于预期行为而非故障。
+     */
     public static byte[] unwrap(PrivateKey privateKey, byte[] wrappedKey) throws CryptoException {
         try {
             Cipher cipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding");
@@ -54,6 +63,7 @@ public final class RsaOaep {
         }
     }
 
+    /** 避免在类初始化阶段触碰 {@link java.security.SecureRandom} 的额外单例。 */
     private static final class SecretsHolder {
         private static final java.security.SecureRandom RANDOM = new java.security.SecureRandom();
     }

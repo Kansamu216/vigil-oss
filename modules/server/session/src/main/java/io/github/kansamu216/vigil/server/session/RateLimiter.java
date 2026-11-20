@@ -4,6 +4,11 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+/**
+ * 固定窗口限流，用于握手与截图请求。
+ *
+ * <p>表本身有上限：超过上限先淘汰最久未使用的键，避免被大量伪造 sessionId 撑爆内存。</p>
+ */
 public final class RateLimiter {
 
     private final int maxEvents;
@@ -28,6 +33,7 @@ public final class RateLimiter {
         };
     }
 
+    /** 记录一次事件；返回 false 表示已超限，应拒绝本次请求。 */
     public synchronized boolean tryAcquire(String key, long nowMillis) {
         Window window = windows.get(key);
         if (window == null || nowMillis - window.startedAtMillis >= windowMillis) {
@@ -42,6 +48,7 @@ public final class RateLimiter {
         return windows.size();
     }
 
+    /** 清理已过窗口的键，供周期性维护调用。 */
     public synchronized void evictExpired(long nowMillis) {
         Iterator<Map.Entry<String, Window>> iterator = windows.entrySet().iterator();
         while (iterator.hasNext()) {

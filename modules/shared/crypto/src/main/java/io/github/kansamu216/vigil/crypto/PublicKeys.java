@@ -5,6 +5,11 @@ import java.security.KeyFactory;
 import java.security.PublicKey;
 import java.security.spec.X509EncodedKeySpec;
 
+/**
+ * 公钥编解码。
+ *
+ * <p>只接受 X.509 编码的 RSA 公钥；调用方必须先核对指纹，再使用公钥验签。</p>
+ */
 public final class PublicKeys {
 
     private PublicKeys() {

@@ -3,6 +3,7 @@ package io.github.kansamu216.vigil.server.decision;
 import io.github.kansamu216.vigil.model.ClientReport;
 import io.github.kansamu216.vigil.model.EvidenceLevel;
 import io.github.kansamu216.vigil.model.Observation;
+import io.github.kansamu216.vigil.model.ObservationCodes;
 import io.github.kansamu216.vigil.model.Verdict;
 import io.github.kansamu216.vigil.model.VerdictAction;
 import java.util.ArrayList;
@@ -11,10 +12,19 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * 证据汇总与处置门槛。
+ *
+ * <p>安全不变式：</p>
+ * <ol>
+ *   <li>客户端报告只是不可信输入，最多形成观测级证据；</li>
+ *   <li>确证/印证只能来自 {@link ServerEvidence}，不能由消息码前缀自证；</li>
+ *   <li>统计类信号（{@code STATS_} 前缀）永远不能触发自动处置，最多告警；</li>
+ *   <li>采集失败（{@code COLLECT_} 前缀）不是证据；</li>
+ *   <li>自动处置只使用服务端评分，封禁还必须达到确证级且显式开启。</li>
+ * </ol>
+ */
 public final class DecisionEngine {
-
-    private static final String STATS_PREFIX = "STATS_";
-    private static final String COLLECT_PREFIX = "COLLECT_";
 
     private final DecisionPolicy policy;
 
@@ -22,6 +32,7 @@ public final class DecisionEngine {
         this.policy = policy;
     }
 
+    /** 只有客户端报告时的入口。它永远不会产生确证级判定或自动处置。 */
     public Verdict evaluate(ClientReport report) {
         return evaluate(report, Collections.<Observation>emptyList(), ServerEvidence.none());
     }
@@ -52,13 +63,13 @@ public final class DecisionEngine {
 
         for (Observation observation : observations) {
             String code = observation.code();
-            if (code.startsWith(COLLECT_PREFIX)) {
+            if (ObservationCodes.isCollect(code)) {
                 continue;
             }
             usable++;
             clientScore = Math.min(100, clientScore + observation.severity());
             codes.add(code);
-            if (!code.startsWith(STATS_PREFIX)) {
+            if (!ObservationCodes.isStats(code)) {
                 onlyStatistics = false;
             }
         }

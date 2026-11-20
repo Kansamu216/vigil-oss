@@ -7,12 +7,23 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * 审计仓储。
+ *
+ * <p>只写事件码与必要元数据：不写密钥、原始硬件值、进程清单或报告原文。
+ * 保留期清理由 {@link #purgeOlderThan(long)} 负责，调用方定期执行。</p>
+ */
 public final class AuditRepository {
 
     private final Database database;
 
     public AuditRepository(Database database) {
         this.database = database;
+    }
+
+    /** 最近查询窗口的最大条数。 */
+    public static int maxRecent() {
+        return 500;
     }
 
     public long append(String eventCode, String playerId, String detail, long nowMillis) {
@@ -36,7 +47,7 @@ public final class AuditRepository {
     }
 
     public List<AuditEntry> recent(int limit) {
-        int bounded = Math.max(1, Math.min(limit, 500));
+        int bounded = Math.max(1, Math.min(limit, maxRecent()));
         String sql = "SELECT id, event_code, player_id, detail, created_at"
                 + " FROM audit ORDER BY id DESC LIMIT ?";
         try (PreparedStatement statement = database.connection().prepareStatement(sql)) {

@@ -9,6 +9,9 @@ import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+/**
+ * 客户端配置：缺少信任锚时不自动接受任何服务器。
+ */
 class ClientSettingsTest {
 
     @Test

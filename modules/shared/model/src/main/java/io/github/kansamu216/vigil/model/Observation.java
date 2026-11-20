@@ -1,5 +1,11 @@
 package io.github.kansamu216.vigil.model;
 
+/**
+ * 客户端上报的一条观测事实。
+ *
+ * <p>是事实不是结论：{@code code} 用于聚合与阈值，{@code detail} 只做人工复核，
+ * 不参与自动处置判断。</p>
+ */
 public final class Observation {
 
     private final String code;

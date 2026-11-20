@@ -7,6 +7,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import java.nio.charset.Charset;
 import org.junit.jupiter.api.Test;
 
+/**
+ * AES-GCM 正常路径与攻击路径。
+ */
 class AeadCipherTest {
 
     private static final Charset UTF_8 = Charset.forName("UTF-8");
@@ -34,7 +37,7 @@ class AeadCipherTest {
     @Test
     void rejectsReplayedSequence() throws CryptoException {
         byte[] sealed = AeadCipher.seal(key, SESSION, 0, 7L, aad, plain);
-
+        // 攻击者把同一密文挂到新序号上重放。
         CryptoException error = assertThrows(
                 CryptoException.class, () -> AeadCipher.unseal(key, SESSION, 0, 8L, aad, sealed));
         assertEquals(CryptoException.Reason.AUTHENTICATION_FAILED, error.reason());

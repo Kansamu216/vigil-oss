@@ -1,5 +1,10 @@
 package io.github.kansamu216.vigil.model;
 
+/**
+ * 服务端签发的挑战。
+ *
+ * <p>单次使用：nonce 被消费后立即失效；过期同样失效，不因重连延长。</p>
+ */
 public final class Challenge {
 
     private final String sessionId;
@@ -51,6 +56,7 @@ public final class Challenge {
         return serverKeyFingerprint;
     }
 
+    /** 服务端公钥的 X.509 编码；客户端必须先按预置指纹校验再使用。 */
     public byte[] serverPublicKey() {
         return serverPublicKey.clone();
     }
@@ -67,6 +73,7 @@ public final class Challenge {
         return nowMillis >= expiresAtMillis;
     }
 
+    /** 签名覆盖：sessionId|nonce|fingerprint|issuedAt|expiresAt|base64(publicKey)。 */
     public byte[] signedPayload() {
         String key = java.util.Base64.getEncoder().encodeToString(serverPublicKey);
         return (sessionId + "|" + nonce + "|" + serverKeyFingerprint + "|"

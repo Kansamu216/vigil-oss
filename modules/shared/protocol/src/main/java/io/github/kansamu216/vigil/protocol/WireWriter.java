@@ -3,6 +3,11 @@ package io.github.kansamu216.vigil.protocol;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.Charset;
 
+/**
+ * 手写大端编码器。
+ *
+ * <p>所有写入都检查上限，避免构造出超长帧再在解码端拒绝。UTF-8 字符串先写 u16 长度。</p>
+ */
 public final class WireWriter {
 
     private static final Charset UTF_8 = Charset.forName("UTF-8");

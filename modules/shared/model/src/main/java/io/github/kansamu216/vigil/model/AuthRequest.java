@@ -1,5 +1,11 @@
 package io.github.kansamu216.vigil.model;
 
+/**
+ * 客户端对挑战的应答：会话密钥包裹 + 加密报告。
+ *
+ * <p>服务端先校验 nonce 与挑战一致，再用私钥解开会话密钥，最后解报告；
+ * 任一步失败都按协议失败处理，不进入判定。</p>
+ */
 public final class AuthRequest {
 
     private final String sessionId;

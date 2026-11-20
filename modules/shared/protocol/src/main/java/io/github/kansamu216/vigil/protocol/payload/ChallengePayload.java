@@ -6,6 +6,12 @@ import io.github.kansamu216.vigil.protocol.ProtocolLimits;
 import io.github.kansamu216.vigil.protocol.WireReader;
 import io.github.kansamu216.vigil.protocol.WireWriter;
 
+/**
+ * 挑战报文编解码。
+ *
+ * <p>签名覆盖 u16 版本 + 五个字段，编码顺序固定，客户端不得自行重排。
+ * 公钥本身不上线，只传指纹，避免自证信任锚。</p>
+ */
 public final class ChallengePayload {
 
     private ChallengePayload() {
@@ -13,7 +19,7 @@ public final class ChallengePayload {
 
     public static byte[] encode(Challenge challenge, byte[] signature) {
         WireWriter writer = new WireWriter(256, ProtocolLimits.MAX_PAYLOAD_BYTES);
-
+        // schema 2：增加服务器公钥。客户端必须先校验预置指纹，再使用该公钥验签。
         writer.u16(2);
         writer.string(challenge.sessionId());
         writer.string(challenge.nonce());
@@ -53,6 +59,7 @@ public final class ChallengePayload {
         return new Decoded(challenge, signature);
     }
 
+    /** 解码结果：挑战本体与签名分开返回，便于先验签再使用。 */
     public static final class Decoded {
         private final Challenge challenge;
         private final byte[] signature;

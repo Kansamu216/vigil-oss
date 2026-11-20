@@ -9,6 +9,9 @@ import io.github.kansamu216.vigil.protocol.ProtocolException;
 import io.github.kansamu216.vigil.protocol.WireWriter;
 import org.junit.jupiter.api.Test;
 
+/**
+ * 挑战负载：公钥必须随签名一起往返，并在解码后仍可校验。
+ */
 class ChallengePayloadTest {
 
     private static final byte[] PUBLIC_KEY = new byte[294];

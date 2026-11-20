@@ -6,6 +6,20 @@ import javax.crypto.Cipher;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
+/**
+ * AES-256-GCM 会话报文加密。
+ *
+ * <pre>
+ * 密文布局：iv[12] || ciphertext || gcmTag[16]
+ * AAD      ：由调用方按 AssociatedData 生成（version|sessionId|messageId|direction|sequence）
+ * IV       ：sessionId 前 4 字节 || direction[1] || sequence 低 7 字节
+ * </pre>
+ *
+ * <p>IV 用 4+1+7=12 字节而不是文档早期写的 4+1+8=13 字节：GCM 标准 IV 为 12 字节，
+ * 13 字节会被 JDK 拒绝。序号在同一会话内单调递增，7 字节足够覆盖会话生命周期。</p>
+ *
+ * <p>{@link Cipher} 每次调用新建，不在线程间共享。</p>
+ */
 public final class AeadCipher {
 
     public static final int KEY_BYTES = 32;
@@ -48,6 +62,11 @@ public final class AeadCipher {
         }
     }
 
+    /**
+     * 解密并校验 IV 与声明的会话/方向/序号一致。
+     *
+     * <p>IV 一致性检查是重放防护的一部分：同一密文换一个序号再发，IV 对不上就直接拒绝。</p>
+     */
     public static byte[] unseal(
             byte[] key, byte[] sessionId, int direction, long sequence, byte[] aad, byte[] sealed)
             throws CryptoException {
@@ -73,7 +92,7 @@ public final class AeadCipher {
             cipher.updateAAD(aad);
             return cipher.doFinal(sealed, IV_BYTES, sealed.length - IV_BYTES);
         } catch (GeneralSecurityException e) {
-
+            // 不区分“tag 错”和“密钥错”，避免给攻击者反馈。
             throw new CryptoException(
                     CryptoException.Reason.AUTHENTICATION_FAILED, "unseal failed", e);
         }

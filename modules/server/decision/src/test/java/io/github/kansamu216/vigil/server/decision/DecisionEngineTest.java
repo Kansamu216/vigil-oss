@@ -11,6 +11,11 @@ import io.github.kansamu216.vigil.testsupport.session.Reports;
 import java.util.Arrays;
 import org.junit.jupiter.api.Test;
 
+/**
+ * 判定门槛与最小信任回归。
+ *
+ * <p>重点防止“客户端自报一个高危消息码，就被服务端当成确证证据”。</p>
+ */
 class DecisionEngineTest {
 
     private static final String NONCE = "0123456789abcdef";

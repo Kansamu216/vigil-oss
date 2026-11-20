@@ -2,6 +2,12 @@ package io.github.kansamu216.vigil.protocol;
 
 import java.nio.charset.Charset;
 
+/**
+ * 手写大端读取器。
+ *
+ * <p>每次读取都检查剩余长度，任何越界都转成 {@link ProtocolException.Code#TRUNCATED}，
+ * 而不是抛 {@link ArrayIndexOutOfBoundsException}：解码器必须能被畸形输入安全喂入。</p>
+ */
 public final class WireReader {
 
     private static final Charset UTF_8 = Charset.forName("UTF-8");
@@ -86,6 +92,7 @@ public final class WireReader {
         return new String(raw, UTF_8);
     }
 
+    /** 读取一个数量字段，超上限直接拒绝，避免用它去预分配数组。 */
     public int count(int maxAllowed, String field) throws ProtocolException {
         int value = u16();
         if (value > maxAllowed) {

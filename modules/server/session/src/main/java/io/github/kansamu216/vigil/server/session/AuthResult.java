@@ -3,6 +3,11 @@ package io.github.kansamu216.vigil.server.session;
 import io.github.kansamu216.vigil.model.Challenge;
 import io.github.kansamu216.vigil.model.ClientReport;
 
+/**
+ * 握手成功的结果。
+ *
+ * <p>会话密钥只保留在内存，方法返回副本供后续保活使用；用尽后调用 {@link #wipe()}。</p>
+ */
 public final class AuthResult {
 
     private final String sessionId;

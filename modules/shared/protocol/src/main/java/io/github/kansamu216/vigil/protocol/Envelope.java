@@ -2,6 +2,9 @@ package io.github.kansamu216.vigil.protocol;
 
 import java.util.Arrays;
 
+/**
+ * 一条协议报文。payload 为业务字段的已编码字节，本身不携带密钥或玩家身份。
+ */
 public final class Envelope {
 
     private final int version;
@@ -80,7 +83,7 @@ public final class Envelope {
 
     @Override
     public String toString() {
-
+        // 不打印 payload：里面可能有报告内容，不能进日志。
         return "Envelope{version=" + version + ", type=" + type
                 + ", direction=" + direction + ", sequence=" + sequence
                 + ", payloadLen=" + payload.length + "}";

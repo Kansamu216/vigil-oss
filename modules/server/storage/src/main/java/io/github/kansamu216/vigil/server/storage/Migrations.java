@@ -7,6 +7,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * Schema 迁移表。
+ *
+ * <p>只向前：已发布的迁移不再修改，修正必须新增版本。
+ * 新增表或索引时同时考虑查询路径，避免全表扫描。</p>
+ */
 final class Migrations {
 
     private static final List<Database.Migration> MIGRATIONS;
@@ -24,6 +30,7 @@ final class Migrations {
         return MIGRATIONS;
     }
 
+    /** V1：封禁与审计。仅存判定所需最小字段，不存报告原文。 */
     static final class V1InitialSchema implements Database.Migration {
 
         @Override

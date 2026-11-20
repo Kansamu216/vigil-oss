@@ -1,5 +1,11 @@
 package io.github.kansamu216.vigil.model;
 
+/**
+ * 一条 Mod 清单事实。
+ *
+ * <p>三元组（modid、version、文件 SHA-256）是完整性判定的基准；
+ * 只有文件名或只有 modid 都不足以作为证据。</p>
+ */
 public final class ModEntry {
 
     private final String id;

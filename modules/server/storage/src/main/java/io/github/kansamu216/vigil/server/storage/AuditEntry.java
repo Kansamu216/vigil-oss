@@ -1,5 +1,8 @@
 package io.github.kansamu216.vigil.server.storage;
 
+/**
+ * 一条审计记录。只含事件码与元数据，不含报告原文。
+ */
 public final class AuditEntry {
 
     private final long id;

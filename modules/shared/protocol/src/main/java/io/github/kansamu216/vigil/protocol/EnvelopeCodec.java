@@ -1,5 +1,15 @@
 package io.github.kansamu216.vigil.protocol;
 
+/**
+ * 信封编解码。
+ *
+ * <pre>
+ * u16 version | u16 messageId | u8 direction | u64 sequence | u16 payloadLen | payload
+ * </pre>
+ *
+ * <p>解码器必须能承受任意畸形输入：截断、超长、负数、未知 id、乱序和额外尾部数据
+ * 都转成 {@link ProtocolException}，不允许抛未捕获异常或按旧语义猜测。</p>
+ */
 public final class EnvelopeCodec {
 
     private EnvelopeCodec() {

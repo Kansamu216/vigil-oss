@@ -7,6 +7,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Properties;
 
+/**
+ * 客户端配置。
+ *
+ * <p>信任锚必须由部署者明确填写；留空表示“尚未配置”，客户端不会自动接受
+ * 首次见到的服务器公钥。指纹格式非法时按未配置处理并记录原因。</p>
+ */
 public final class ClientSettings {
 
     public static final String FILE_NAME = "client.properties";
@@ -79,6 +85,7 @@ public final class ClientSettings {
         return fingerprint;
     }
 
+    /** 未配置或格式非法时的原因，用于启动日志；没有问题时返回 null。 */
     public String problem() {
         return problem;
     }

@@ -7,6 +7,12 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 
+/**
+ * SQLite 连接与 migration 执行器。
+ *
+ * <p>规则：单写线程使用、WAL、busy_timeout 有界、migration 只向前且每步独立事务。
+ * 备份由调用方在 migration 前完成（本类只负责失败时回滚当前步骤）。</p>
+ */
 public final class Database implements Closeable {
 
     private final Connection connection;
@@ -28,12 +34,14 @@ public final class Database implements Closeable {
         return open("jdbc:sqlite:" + absolute);
     }
 
+    /** 测试用内存库：{@code jdbc:sqlite::memory:}。 */
     public static Database openInMemory() throws SQLException {
         return open("jdbc:sqlite::memory:");
     }
 
     private static Database open(String url) throws SQLException {
-
+        // 驱动由本模块显式加载：Mod 环境下类可能来自重定位/展开后的目录，
+        // 不能依赖 java.sql.Driver 的 ServiceLoader 自动发现。
         try {
             Class.forName("org.sqlite.JDBC");
         } catch (ClassNotFoundException e) {
@@ -92,6 +100,7 @@ public final class Database implements Closeable {
         }
     }
 
+    /** 单步 migration。版本号必须连续，不允许跳号。 */
     public interface Migration {
         int version();
 

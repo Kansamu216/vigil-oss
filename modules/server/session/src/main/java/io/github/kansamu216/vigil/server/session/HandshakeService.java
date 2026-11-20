@@ -19,6 +19,14 @@ import java.nio.charset.Charset;
 import java.security.KeyPair;
 import java.util.UUID;
 
+/**
+ * 挑战下发与握手校验。
+ *
+ * <p>顺序固定：限流 → 会话存在 → 状态 → 失败次数 → nonce → 有效期 → 解会话密钥
+ * → 解报告 → 报告与挑战绑定校验。任何一步失败都只增加失败计数，不进入判定。</p>
+ *
+ * <p>本类不做判定、不落库、不踢人：它只回答“这次握手是否成立”。</p>
+ */
 public final class HandshakeService {
 
     private static final Charset UTF_8 = Charset.forName("UTF-8");
@@ -39,7 +47,7 @@ public final class HandshakeService {
         this.keyFingerprint = KeyFingerprint.of(serverKeyPair.getPublic());
         this.challengeTtlMillis = challengeTtlMillis;
         this.sessions = sessions;
-
+        // 同一会话 10 秒内最多 5 次应答，表上限 4096 个会话 id。
         this.authLimiter = new RateLimiter(5, 10_000L, 4096);
     }
 
@@ -51,6 +59,9 @@ public final class HandshakeService {
         return sessions;
     }
 
+    /**
+     * 为玩家签发一次性挑战。玩家重复进服会得到新会话，旧会话自然过期。
+     */
     public SignedChallenge issueChallenge(String playerId, long nowMillis) {
         if (playerId == null || playerId.isEmpty()) {
             throw new IllegalArgumentException("playerId is required");
@@ -82,7 +93,8 @@ public final class HandshakeService {
         if (record == null) {
             return AuthOutcome.failed(AuthFailure.UNKNOWN_SESSION);
         }
-
+        // 同一时刻只有一个线程能推进某个会话的状态与序号；其他会话仍可并行。
+        // 并发重放同一 AUTH 帧时，只有第一个能通过状态检查。
         synchronized (record) {
             return authenticateLocked(record, request, nowMillis);
         }
@@ -158,6 +170,7 @@ public final class HandshakeService {
         }
         Secrets.wipe(plain);
 
+        // 报告必须绑定本次挑战与本次会话的玩家，防止跨会话搬运报告。
         if (!report.nonce().equals(challenge.nonce())
                 || !report.playerId().equals(record.playerId())) {
             Secrets.wipe(sessionKey);
@@ -170,6 +183,7 @@ public final class HandshakeService {
         return AuthOutcome.success(AuthResult.of(challenge, report, sessionKey));
     }
 
+    /** 保活：只刷新活动时间，序号必须单调，复用序号视为重放。 */
     public boolean keepalive(String sessionId, long sequence, long nowMillis) {
         SessionRecord record = sessions.get(sessionId);
         if (record == null) {
@@ -187,6 +201,7 @@ public final class HandshakeService {
         }
     }
 
+    /** 关服清理：释放会话与限流表。 */
     public void shutdown() {
         sessions.clear();
         authLimiter.evictExpired(Long.MAX_VALUE);

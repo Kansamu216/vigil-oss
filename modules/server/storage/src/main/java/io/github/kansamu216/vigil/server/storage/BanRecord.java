@@ -1,5 +1,8 @@
 package io.github.kansamu216.vigil.server.storage;
 
+/**
+ * 一条封禁记录。UUID 为主键语义，玩家改名不影响封禁。
+ */
 public final class BanRecord {
 
     private final long id;
