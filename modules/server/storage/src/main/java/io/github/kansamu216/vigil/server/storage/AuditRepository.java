@@ -47,11 +47,29 @@ public final class AuditRepository {
     }
 
     public List<AuditEntry> recent(int limit) {
+        return query(null, null, 0L, Long.MAX_VALUE, Long.MAX_VALUE, limit);
+    }
+
+    public List<AuditEntry> query(String playerId, String eventPrefix, long fromMillis, long toMillis,
+            long beforeId, int limit) {
         int bounded = Math.max(1, Math.min(limit, maxRecent()));
         String sql = "SELECT id, event_code, player_id, detail, created_at"
-                + " FROM audit ORDER BY id DESC LIMIT ?";
+                + " FROM audit WHERE created_at >= ? AND created_at <= ? AND id < ?"
+                + (playerId == null ? "" : " AND player_id = ?")
+                + (eventPrefix == null ? "" : " AND instr(event_code, ?) = 1")
+                + " ORDER BY id DESC LIMIT ?";
         try (PreparedStatement statement = database.connection().prepareStatement(sql)) {
-            statement.setInt(1, bounded);
+            statement.setLong(1, fromMillis);
+            statement.setLong(2, toMillis);
+            statement.setLong(3, beforeId);
+            int parameter = 4;
+            if (playerId != null) {
+                statement.setString(parameter++, playerId);
+            }
+            if (eventPrefix != null) {
+                statement.setString(parameter++, eventPrefix);
+            }
+            statement.setInt(parameter, bounded);
             try (ResultSet result = statement.executeQuery()) {
                 List<AuditEntry> entries = new ArrayList<AuditEntry>();
                 while (result.next()) {

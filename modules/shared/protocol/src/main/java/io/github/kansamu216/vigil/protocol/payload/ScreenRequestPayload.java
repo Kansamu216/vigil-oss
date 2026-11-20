@@ -8,7 +8,7 @@ import io.github.kansamu216.vigil.protocol.WireWriter;
 /**
  * 截图请求（服务端 → 客户端）。
  *
- * <p>请求本身携带本次采集的全部上限，客户端必须按这些值裁剪分片，不得自行放宽。
+ * <p>请求携带本次采集的全部上限，客户端必须在这些限制内完成分片。
  * 服务端下发时同时下发过期时刻；过期后客户端即使已完成采集也不得上传。</p>
  */
 public final class ScreenRequestPayload {

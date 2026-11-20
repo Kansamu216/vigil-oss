@@ -1,0 +1,5 @@
+{
+  "vigil.privacy.session": "[Vigil] 会话校验使用你的 Minecraft UUID 和玩家名。已配置的 Vigil 客户端还可能发送 Mod ID、版本、文件名、大小和 SHA-256 摘要，用于白名单校验。",
+  "vigil.privacy.retention": "[Vigil] Vigil 审计记录保留 %s 天。Minecraft 服务端为建立连接会收到你的 IP 地址。查询或删除数据，以及了解服务器日志的留存期限，请联系服主。",
+  "vigil.privacy.verification_delayed": "Vigil 暂未完成本次连接的校验。"
+}

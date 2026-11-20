@@ -20,6 +20,9 @@ public final class ProtocolLimits {
     /** 单帧总长度上限。 */
     public static final int MAX_FRAME_BYTES = ENVELOPE_HEADER_BYTES + MAX_PAYLOAD_BYTES;
 
+    /** Outbound authentication frame budget with headroom for loader framing. */
+    public static final int MAX_AUTH_FRAME_BYTES = 31 * 1024;
+
     /** 单个字符串字段上限（UTF-8 字节）。 */
     public static final int MAX_STRING_BYTES = 512;
 

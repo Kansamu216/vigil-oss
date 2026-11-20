@@ -4,7 +4,7 @@ license = "All Rights Reserved"
 
 [[mods]]
 modId = "vigil"
-version = "0.1.0-dev.3"
+version = "${vigilVersion}"
 displayName = "Vigil"
 description = '''Vigil（守夜）：Minecraft 服务端的会话校验与观测组件。'''
 

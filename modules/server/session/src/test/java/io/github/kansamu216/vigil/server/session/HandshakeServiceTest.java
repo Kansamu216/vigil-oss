@@ -43,6 +43,27 @@ class HandshakeServiceTest {
     }
 
     @Test
+    void samePlayerReconnectsWithoutKeepingTheOldConnectionChallenge() throws Exception {
+        Object oldConnection = new Object();
+        Object currentConnection = new Object();
+        SignedChallenge previous = service.issueChallenge(PLAYER, oldConnection, NOW);
+        SignedChallenge signed = service.issueChallenge(PLAYER, currentConnection, NOW + 1L);
+        service.closeConnection(PLAYER, oldConnection);
+        assertEquals(SessionState.CLOSED, service.sessions().stateOf(previous.challenge().sessionId()));
+
+        Challenge challenge = signed.challenge();
+        client.verifyChallenge(challenge, signed.signature(), NOW + 1L);
+        AuthRequest request = client.respond(challenge, Reports.clean(challenge.nonce(), PLAYER), 0L);
+        assertEquals(AuthFailure.CONNECTION_MISMATCH,
+                service.authenticate(PLAYER, oldConnection, request, NOW + 2L).failure());
+        AuthOutcome outcome = service.authenticate(PLAYER, currentConnection, request, NOW + 3L);
+        assertTrue(outcome.isSuccess());
+        outcome.result().wipe();
+        service.closeConnection(PLAYER, currentConnection);
+        assertEquals(0, service.sessions().size());
+    }
+
+    @Test
     void completesHandshake() throws Exception {
         SignedChallenge signed = issue(NOW);
         Challenge challenge = signed.challenge();
@@ -52,7 +73,7 @@ class HandshakeServiceTest {
         client.verifyChallenge(challenge, signed.signature(), NOW);
         AuthRequest request = client.respond(challenge, report, 0L);
 
-        AuthOutcome outcome = service.authenticate(request, NOW + 1_000L);
+        AuthOutcome outcome = service.authenticate(PLAYER, request, NOW + 1_000L);
         assertTrue(outcome.isSuccess());
         assertEquals(PLAYER, outcome.result().playerId());
         assertEquals(1, outcome.result().report().mods().size());
@@ -69,7 +90,7 @@ class HandshakeServiceTest {
         AuthRequest forged = new AuthRequest(
                 valid.sessionId(), "0000000000000000", valid.wrappedSessionKey(), valid.encryptedReport());
 
-        AuthOutcome outcome = service.authenticate(forged, NOW + 10L);
+        AuthOutcome outcome = service.authenticate(PLAYER, forged, NOW + 10L);
         assertFalse(outcome.isSuccess());
         assertEquals(AuthFailure.NONCE_MISMATCH, outcome.failure());
     }
@@ -81,7 +102,7 @@ class HandshakeServiceTest {
         client.verifyChallenge(challenge, signed.signature(), NOW);
         AuthRequest request = client.respond(challenge, Reports.clean(challenge.nonce(), PLAYER), 0L);
 
-        AuthOutcome outcome = service.authenticate(request, NOW + TTL + 1L);
+        AuthOutcome outcome = service.authenticate(PLAYER, request, NOW + TTL + 1L);
         assertFalse(outcome.isSuccess());
         assertEquals(AuthFailure.CHALLENGE_EXPIRED, outcome.failure());
         assertEquals(SessionState.CLOSED, service.sessions().stateOf(challenge.sessionId()));
@@ -94,8 +115,8 @@ class HandshakeServiceTest {
         client.verifyChallenge(challenge, signed.signature(), NOW);
         AuthRequest request = client.respond(challenge, Reports.clean(challenge.nonce(), PLAYER), 0L);
 
-        assertTrue(service.authenticate(request, NOW + 1L).isSuccess());
-        AuthOutcome second = service.authenticate(request, NOW + 2L);
+        assertTrue(service.authenticate(PLAYER, request, NOW + 1L).isSuccess());
+        AuthOutcome second = service.authenticate(PLAYER, request, NOW + 2L);
         assertFalse(second.isSuccess());
         assertEquals(AuthFailure.ALREADY_AUTHENTICATED, second.failure());
     }
@@ -108,7 +129,7 @@ class HandshakeServiceTest {
         AuthRequest request = ReferenceClient.respondWithKey(
                 otherDelivery.getPublic(), challenge, Reports.clean(challenge.nonce(), PLAYER));
 
-        AuthOutcome outcome = service.authenticate(request, NOW + 1L);
+        AuthOutcome outcome = service.authenticate(PLAYER, request, NOW + 1L);
         assertFalse(outcome.isSuccess());
         assertEquals(AuthFailure.KEY_UNWRAP_FAILED, outcome.failure());
     }
@@ -122,7 +143,7 @@ class HandshakeServiceTest {
         AuthRequest unknown = new AuthRequest(
                 "no-such-session", request.nonce(), request.wrappedSessionKey(), request.encryptedReport());
 
-        AuthOutcome outcome = service.authenticate(unknown, NOW + 1L);
+        AuthOutcome outcome = service.authenticate(PLAYER, unknown, NOW + 1L);
         assertFalse(outcome.isSuccess());
         assertEquals(AuthFailure.UNKNOWN_SESSION, outcome.failure());
     }
@@ -137,9 +158,9 @@ class HandshakeServiceTest {
                 valid.sessionId(), "0000000000000000", valid.wrappedSessionKey(), valid.encryptedReport());
 
         for (int i = 0; i < 5; i++) {
-            assertFalse(service.authenticate(forged, NOW + i).isSuccess());
+            assertFalse(service.authenticate(PLAYER, forged, NOW + i).isSuccess());
         }
-        AuthOutcome limited = service.authenticate(forged, NOW + 6L);
+        AuthOutcome limited = service.authenticate(PLAYER, forged, NOW + 6L);
         assertEquals(AuthFailure.RATE_LIMITED, limited.failure());
     }
 
@@ -149,7 +170,7 @@ class HandshakeServiceTest {
         Challenge challenge = signed.challenge();
         client.verifyChallenge(challenge, signed.signature(), NOW);
         AuthRequest request = client.respond(challenge, Reports.clean(challenge.nonce(), PLAYER), 0L);
-        service.authenticate(request, NOW + 1L);
+        service.authenticate(PLAYER, request, NOW + 1L);
 
         assertTrue(service.keepalive(challenge.sessionId(), 1L, NOW + 2L));
         assertFalse(service.keepalive(challenge.sessionId(), 1L, NOW + 3L));
@@ -165,7 +186,7 @@ class HandshakeServiceTest {
         client.verifyChallenge(challenge, signed.signature(), NOW);
         AuthRequest request = client.respond(challenge, report, 0L);
 
-        AuthOutcome outcome = service.authenticate(request, NOW + 1L);
+        AuthOutcome outcome = service.authenticate(PLAYER, request, NOW + 1L);
         assertTrue(outcome.isSuccess());
         // 握手层不产生结论：报告里只有事实。
         assertEquals(1, outcome.result().report().observations().size());

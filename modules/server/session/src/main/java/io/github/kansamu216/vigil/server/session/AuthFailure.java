@@ -10,6 +10,9 @@ public enum AuthFailure {
     /** 会话不存在或已关闭。 */
     UNKNOWN_SESSION,
 
+    /** 报文来源连接与挑战不匹配。 */
+    CONNECTION_MISMATCH,
+
     /** nonce 与挑战不一致（重放、串包或旧挑战）。 */
     NONCE_MISMATCH,
 

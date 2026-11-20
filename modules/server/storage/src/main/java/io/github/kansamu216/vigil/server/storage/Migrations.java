@@ -20,6 +20,7 @@ final class Migrations {
     static {
         List<Database.Migration> list = new ArrayList<Database.Migration>();
         list.add(new V1InitialSchema());
+        list.add(new V2AuditPlayerIndex());
         MIGRATIONS = Collections.unmodifiableList(list);
     }
 
@@ -28,6 +29,20 @@ final class Migrations {
 
     static List<Database.Migration> all() {
         return MIGRATIONS;
+    }
+
+    private static final class V2AuditPlayerIndex implements Database.Migration {
+        @Override
+        public int version() {
+            return 2;
+        }
+
+        @Override
+        public void apply(Connection connection) throws SQLException {
+            try (Statement statement = connection.createStatement()) {
+                statement.execute("CREATE INDEX IF NOT EXISTS idx_audit_player_id ON audit(player_id, id DESC)");
+            }
+        }
     }
 
     /** V1：封禁与审计。仅存判定所需最小字段，不存报告原文。 */

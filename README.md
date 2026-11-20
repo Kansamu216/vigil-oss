@@ -21,6 +21,8 @@ Minecraft 服务端会话校验与观测组件。
 - 服务端：`config/vigil/server.properties`
 - 服务端白名单：`config/vigil/mods.txt`（每行 `modId [version] [sha256]`）
 
+玩家数据和部署方告知要求见 [数据处理](docs/privacy.md)。
+
 ## 管理命令
 
 ```text

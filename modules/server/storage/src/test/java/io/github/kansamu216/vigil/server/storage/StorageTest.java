@@ -39,7 +39,7 @@ class StorageTest {
 
     @Test
     void migratesToCurrentVersion() throws Exception {
-        assertEquals(1, database.schemaVersion());
+        assertEquals(2, database.schemaVersion());
     }
 
     @Test
@@ -52,6 +52,20 @@ class StorageTest {
         bans.ban(UUID, "tester", "integrity", NOW, 0L);
         assertTrue(bans.activeBan(UUID, NOW + 10_000L).isPresent());
         assertEquals(1, bans.activeCount(NOW));
+    }
+
+    @Test
+    void admissionIndexKeepsOverlappingBansAndTracksPersistedChanges() throws Exception {
+        bans.ban(UUID, "tester", "longer", NOW, NOW + 100L);
+        bans.ban(UUID, "tester", "shorter", NOW, NOW + 10L);
+        BanRepository restored = new BanRepository(database);
+        restored.loadAdmissionIndex(NOW + 50L);
+        assertTrue(restored.blocksAdmission(UUID, NOW + 50L));
+        assertFalse(restored.blocksAdmission(UUID, NOW + 100L));
+        restored.ban(UUID, "tester", "permanent", NOW + 50L, 0L);
+        assertTrue(restored.blocksAdmission(UUID, NOW + 200L));
+        restored.unban(UUID);
+        assertFalse(restored.blocksAdmission(UUID, NOW + 51L));
     }
 
     @Test
@@ -103,7 +117,7 @@ class StorageTest {
 
         database = Database.open(file.toPath());
         bans = new BanRepository(database);
-        assertEquals(1, database.schemaVersion());
+        assertEquals(2, database.schemaVersion());
         assertTrue(new BanRepository(database).activeBan(UUID, NOW).isPresent());
     }
 }

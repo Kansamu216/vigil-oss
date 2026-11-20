@@ -15,6 +15,7 @@ import io.github.kansamu216.vigil.protocol.Direction;
 import io.github.kansamu216.vigil.protocol.Envelope;
 import io.github.kansamu216.vigil.protocol.EnvelopeCodec;
 import io.github.kansamu216.vigil.protocol.MessageType;
+import io.github.kansamu216.vigil.protocol.ProtocolLimits;
 import io.github.kansamu216.vigil.protocol.ProtocolVersion;
 import io.github.kansamu216.vigil.protocol.payload.AuthPayload;
 import io.github.kansamu216.vigil.protocol.payload.ReportPayload;
@@ -109,42 +110,32 @@ public final class ClientSession {
         }
 
         byte[] sessionKey = AeadCipher.newSessionKey();
-        byte[] wrappedKey;
+        byte[] plain = null;
         try {
-            wrappedKey = RsaOaep.wrap(serverPublicKey, sessionKey);
-        } catch (CryptoException e) {
-            Secrets.wipe(sessionKey);
-            throw new ClientHandshakeException(
-                    ClientHandshakeException.Reason.INVALID_KEY, "failed to wrap session key", e);
-        }
-
-        byte[] sessionIdBytes = challenge.sessionId().getBytes(UTF_8);
-        byte[] aad = AssociatedData.build(
-                ProtocolVersion.MAJOR,
-                sessionIdBytes,
-                MessageType.AUTH.id(),
-                Direction.CLIENT_TO_SERVER,
-                0L);
-        byte[] plain = ReportPayload.encode(report);
-        byte[] encrypted;
-        try {
-            encrypted = AeadCipher.seal(
+            byte[] wrappedKey = RsaOaep.wrap(serverPublicKey, sessionKey);
+            byte[] sessionIdBytes = challenge.sessionId().getBytes(UTF_8);
+            int budget = ProtocolLimits.MAX_AUTH_FRAME_BYTES - ProtocolLimits.ENVELOPE_HEADER_BYTES
+                    - 4 * Short.BYTES - sessionIdBytes.length
+                    - challenge.nonce().getBytes(UTF_8).length - wrappedKey.length
+                    - AeadCipher.IV_BYTES - AeadCipher.TAG_BITS / Byte.SIZE;
+            plain = ReportPayload.encodeFitting(report, budget);
+            byte[] aad = AssociatedData.build(ProtocolVersion.MAJOR, sessionIdBytes, MessageType.AUTH.id(),
+                    Direction.CLIENT_TO_SERVER, 0L);
+            byte[] encrypted = AeadCipher.seal(
                     sessionKey,
                     sessionIdBytes,
                     Direction.CLIENT_TO_SERVER.wireValue(),
                     0L,
                     aad,
                     plain);
+            return new AuthRequest(challenge.sessionId(), challenge.nonce(), wrappedKey, encrypted);
         } catch (CryptoException e) {
-            Secrets.wipe(sessionKey);
             throw new ClientHandshakeException(
-                    ClientHandshakeException.Reason.INVALID_KEY, "failed to seal report", e);
+                    ClientHandshakeException.Reason.INVALID_KEY, "failed to encrypt report", e);
         } finally {
             Secrets.wipe(plain);
             Secrets.wipe(sessionKey);
         }
-
-        return new AuthRequest(challenge.sessionId(), challenge.nonce(), wrappedKey, encrypted);
     }
 
     /**

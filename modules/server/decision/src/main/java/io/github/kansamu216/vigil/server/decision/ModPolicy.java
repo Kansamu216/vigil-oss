@@ -1,5 +1,6 @@
 package io.github.kansamu216.vigil.server.decision;
 
+import io.github.kansamu216.vigil.model.ClientReport;
 import io.github.kansamu216.vigil.model.ModEntry;
 import io.github.kansamu216.vigil.model.Observation;
 import java.io.IOException;
@@ -100,6 +101,20 @@ public final class ModPolicy {
     }
 
     public Result evaluate(List<ModEntry> mods) {
+        return evaluate(mods, true);
+    }
+
+    public static boolean inventoryComplete(ClientReport report) {
+        for (Observation observation : report.observations()) {
+            String code = observation.code();
+            if (code.startsWith("COLLECT_MOD_") || "COLLECT_REPORT_TRUNCATED".equals(code)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public Result evaluate(List<ModEntry> mods, boolean inventoryComplete) {
         if (!enabled) {
             return Result.empty();
         }
@@ -128,7 +143,7 @@ public final class ModPolicy {
         }
 
         List<Observation> observations = new ArrayList<Observation>();
-        if (mods.isEmpty()) {
+        if (mods.isEmpty() && inventoryComplete) {
             observations.add(new Observation("MOD_POLICY_EMPTY", "no mod list", 40));
         }
         if (unknown > 0) {

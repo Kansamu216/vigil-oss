@@ -2,6 +2,7 @@ package io.github.kansamu216.vigil.server.session;
 
 import io.github.kansamu216.vigil.model.Challenge;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -17,24 +18,30 @@ public final class SessionRegistry {
 
     private final int maxSessions;
     private final LinkedHashMap<String, SessionRecord> sessions;
+    private final Map<String, SessionRecord> players = new HashMap<String, SessionRecord>();
 
     public SessionRegistry(int maxSessions) {
         if (maxSessions <= 0) {
             throw new IllegalArgumentException("maxSessions must be positive");
         }
         this.maxSessions = maxSessions;
-        this.sessions = new LinkedHashMap<String, SessionRecord>(16, 0.75f, true) {
-            private static final long serialVersionUID = 1L;
-
-            @Override
-            protected boolean removeEldestEntry(Map.Entry<String, SessionRecord> eldest) {
-                return size() > SessionRegistry.this.maxSessions;
-            }
-        };
+        this.sessions = new LinkedHashMap<String, SessionRecord>(16, 0.75f, true);
     }
 
     synchronized void put(SessionRecord record) {
+        SessionRecord previous = players.put(record.playerId(), record);
+        if (previous != null) {
+            sessions.remove(previous.sessionId());
+            close(previous);
+        }
         sessions.put(record.sessionId(), record);
+        if (sessions.size() > maxSessions) {
+            Iterator<SessionRecord> iterator = sessions.values().iterator();
+            SessionRecord oldest = iterator.next();
+            iterator.remove();
+            players.remove(oldest.playerId());
+            close(oldest);
+        }
     }
 
     synchronized SessionRecord get(String sessionId) {
@@ -45,6 +52,21 @@ public final class SessionRegistry {
         return sessions.size();
     }
 
+    synchronized void closeConnection(String playerId, Object connection) {
+        SessionRecord record = players.get(playerId);
+        if (record != null && record.belongsTo(playerId, connection)) {
+            players.remove(playerId);
+            sessions.remove(record.sessionId());
+            close(record);
+        }
+    }
+
+    private static void close(SessionRecord record) {
+        synchronized (record) {
+            record.state(SessionState.CLOSED);
+        }
+    }
+
     /**
      * 关闭超时会话，返回被关闭的会话 id，供上层记审计。
      */
@@ -53,10 +75,13 @@ public final class SessionRegistry {
         Iterator<Map.Entry<String, SessionRecord>> iterator = sessions.entrySet().iterator();
         while (iterator.hasNext()) {
             SessionRecord record = iterator.next().getValue();
-            if (nowMillis - record.lastActivityMillis() >= idleTimeoutMillis) {
-                record.state(SessionState.CLOSED);
-                closed.add(record.sessionId());
-                iterator.remove();
+            synchronized (record) {
+                if (nowMillis - record.lastActivityMillis() >= idleTimeoutMillis) {
+                    record.state(SessionState.CLOSED);
+                    closed.add(record.sessionId());
+                    iterator.remove();
+                    players.remove(record.playerId());
+                }
             }
         }
         return closed;
@@ -69,11 +94,20 @@ public final class SessionRegistry {
 
     public synchronized SessionState stateOf(String sessionId) {
         SessionRecord record = get(sessionId);
-        return record == null ? SessionState.CLOSED : record.state();
+        if (record == null) {
+            return SessionState.CLOSED;
+        }
+        synchronized (record) {
+            return record.state();
+        }
     }
 
     /** 关服或断线时清理，密钥引用随记录一起被丢弃。 */
     public synchronized void clear() {
+        for (SessionRecord record : sessions.values()) {
+            close(record);
+        }
         sessions.clear();
+        players.clear();
     }
 }

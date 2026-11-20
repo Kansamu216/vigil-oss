@@ -8,7 +8,7 @@ plugins {
 }
 
 group = "io.github.kansamu216.vigil.platform"
-version = "0.1.0-dev.3"
+version = "0.1.0-dev.4"
 
 java {
     toolchain {
@@ -18,6 +18,13 @@ java {
 
 tasks.withType<JavaCompile>().configureEach {
     options.encoding = "UTF-8"
+}
+
+tasks.named<ProcessResources>("processResources") {
+    inputs.property("vigilVersion", project.version)
+    filesMatching("META-INF/neoforge.mods.toml") {
+        expand(mapOf("vigilVersion" to project.version))
+    }
 }
 
 val coreVersion: String by project
@@ -47,7 +54,6 @@ val serverSourceSet = sourceSets.create("server") {
 }
 val clientSourceSet = sourceSets.create("client") {
     java.srcDir("src/client/java")
-    resources.srcDir("src/client/resources")
 }
 configurations["serverImplementation"].extendsFrom(configurations["implementation"])
 configurations["serverRuntimeOnly"].extendsFrom(configurations["runtimeOnly"])

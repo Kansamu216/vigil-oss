@@ -4,7 +4,9 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 封禁仓储。所有 SQL 参数化；只返回当前有效封禁。
@@ -15,9 +17,30 @@ public final class BanRepository {
     private static final long PERMANENT = 0L;
 
     private final Database database;
+    private final Map<String, Long> admissionDeadlines = new ConcurrentHashMap<String, Long>();
 
     public BanRepository(Database database) {
         this.database = database;
+    }
+
+    /** Loads the login index before the server begins accepting joins. */
+    public void loadAdmissionIndex(long nowMillis) throws SQLException {
+        String sql = "SELECT player_uuid, CASE WHEN MIN(expires_at) = 0 THEN 0 ELSE MAX(expires_at) END"
+                + " FROM bans WHERE active = 1 AND (expires_at = 0 OR expires_at > ?) GROUP BY player_uuid";
+        try (PreparedStatement statement = database.connection().prepareStatement(sql)) {
+            statement.setLong(1, nowMillis);
+            try (ResultSet result = statement.executeQuery()) {
+                admissionDeadlines.clear();
+                while (result.next()) {
+                    admissionDeadlines.put(result.getString(1), result.getLong(2));
+                }
+            }
+        }
+    }
+
+    public boolean blocksAdmission(String playerUuid, long nowMillis) {
+        Long deadline = admissionDeadlines.get(playerUuid);
+        return deadline != null && (deadline == PERMANENT || deadline > nowMillis);
     }
 
     public long ban(
@@ -25,6 +48,7 @@ public final class BanRepository {
         if (playerUuid == null || playerUuid.isEmpty()) {
             throw new IllegalArgumentException("playerUuid is required");
         }
+        long deadline = expiresAtMillis <= 0L ? PERMANENT : expiresAtMillis;
         String sql = "INSERT INTO bans"
                 + " (player_uuid, player_name, reason, created_at, expires_at, active)"
                 + " VALUES (?, ?, ?, ?, ?, 1)";
@@ -34,8 +58,10 @@ public final class BanRepository {
             statement.setString(2, playerName == null ? "" : playerName);
             statement.setString(3, reason == null ? "" : reason);
             statement.setLong(4, nowMillis);
-            statement.setLong(5, expiresAtMillis <= 0L ? PERMANENT : expiresAtMillis);
+            statement.setLong(5, deadline);
             statement.executeUpdate();
+            admissionDeadlines.merge(playerUuid, deadline, (a, b) ->
+                    a == PERMANENT || b == PERMANENT ? PERMANENT : Math.max(a, b));
             try (ResultSet keys = statement.getGeneratedKeys()) {
                 return keys.next() ? keys.getLong(1) : -1L;
             }
@@ -74,7 +100,9 @@ public final class BanRepository {
         String sql = "UPDATE bans SET active = 0 WHERE player_uuid = ? AND active = 1";
         try (PreparedStatement statement = database.connection().prepareStatement(sql)) {
             statement.setString(1, playerUuid);
-            return statement.executeUpdate();
+            int changed = statement.executeUpdate();
+            admissionDeadlines.remove(playerUuid);
+            return changed;
         } catch (SQLException e) {
             throw new StorageException("failed to unban", e);
         }
@@ -97,7 +125,10 @@ public final class BanRepository {
         String sql = "UPDATE bans SET active = 0 WHERE active = 1 AND expires_at > 0 AND expires_at <= ?";
         try (PreparedStatement statement = database.connection().prepareStatement(sql)) {
             statement.setLong(1, nowMillis);
-            return statement.executeUpdate();
+            int changed = statement.executeUpdate();
+            admissionDeadlines.entrySet().removeIf(entry ->
+                    entry.getValue() != PERMANENT && entry.getValue() <= nowMillis);
+            return changed;
         } catch (SQLException e) {
             throw new StorageException("failed to purge expired bans", e);
         }

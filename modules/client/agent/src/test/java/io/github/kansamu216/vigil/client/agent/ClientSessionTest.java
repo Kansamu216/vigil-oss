@@ -9,11 +9,16 @@ import io.github.kansamu216.vigil.crypto.KeyFingerprint;
 import io.github.kansamu216.vigil.crypto.RsaOaep;
 import io.github.kansamu216.vigil.model.Challenge;
 import io.github.kansamu216.vigil.model.ClientReport;
+import io.github.kansamu216.vigil.model.ModEntry;
 import io.github.kansamu216.vigil.protocol.Envelope;
 import io.github.kansamu216.vigil.protocol.EnvelopeCodec;
 import io.github.kansamu216.vigil.protocol.MessageType;
+import io.github.kansamu216.vigil.protocol.ProtocolLimits;
 import io.github.kansamu216.vigil.protocol.payload.AuthPayload;
 import java.security.KeyPair;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -67,6 +72,25 @@ class ClientSessionTest {
         Envelope envelope = EnvelopeCodec.decode(frame);
         assertEquals(MessageType.AUTH, envelope.type());
         assertEquals("session-1", AuthPayload.decode(envelope.payload()).sessionId());
+    }
+
+    @Test
+    void largeModpackUsesTheActualEncryptedFrameBudget() throws Exception {
+        Challenge challenge = challenge(NOW + 20_000L, fingerprint);
+        session.acceptChallenge(challenge,
+                ChallengeSignature.sign(server.getPrivate(), challenge.signedPayload()), NOW);
+        List<ModEntry> mods = new ArrayList<ModEntry>();
+        for (int i = 0; i < 500; i++) {
+            String id = "sample-mod-" + i;
+            mods.add(new ModEntry(id, "1.0.0", id + ".jar", 12_000L, SHA));
+        }
+        ClientReport report = new ClientReport(1, NONCE, "player-1", "tester", mods,
+                Collections.emptyList(), "", NOW);
+
+        byte[] frame = session.authFrame(challenge, report, NOW + 1L);
+        assertTrue(frame.length <= ProtocolLimits.MAX_AUTH_FRAME_BYTES);
+        assertTrue(frame.length > ProtocolLimits.MAX_AUTH_FRAME_BYTES - 256);
+        assertEquals(MessageType.AUTH, EnvelopeCodec.decode(frame).type());
     }
 
     @Test

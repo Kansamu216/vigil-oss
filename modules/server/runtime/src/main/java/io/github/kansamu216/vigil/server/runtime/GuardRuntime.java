@@ -27,6 +27,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.security.KeyPair;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 public final class GuardRuntime implements Closeable {
 
@@ -55,13 +56,14 @@ public final class GuardRuntime implements Closeable {
             DecisionEngine decision,
             Database database,
             RuntimeListener listener,
-            ModPolicy modPolicy) {
+            ModPolicy modPolicy) throws java.sql.SQLException {
         this.config = config;
         this.sessions = sessions;
         this.handshake = handshake;
         this.decision = decision;
         this.database = database;
         this.bans = new BanRepository(database);
+        this.bans.loadAdmissionIndex(System.currentTimeMillis());
         this.audit = new AuditRepository(database);
         this.listener = listener;
         this.modPolicy = modPolicy == null ? ModPolicy.disabled() : modPolicy;
@@ -77,8 +79,9 @@ public final class GuardRuntime implements Closeable {
             KeyPair serverKeyPair,
             RuntimeListener listener,
             ModPolicy modPolicy) throws IOException {
+        Database database = null;
         try {
-            Database database = Database.open(java.nio.file.Paths.get(config.databasePath()));
+            database = Database.open(java.nio.file.Paths.get(config.databasePath()));
             SessionRegistry sessions = new SessionRegistry(config.maxSessions());
             HandshakeService handshake =
                     new HandshakeService(serverKeyPair, config.challengeTtlMillis(), sessions);
@@ -87,6 +90,13 @@ public final class GuardRuntime implements Closeable {
                     config, sessions, handshake, decision, database,
                     listener == null ? RuntimeListener.NOOP : listener, modPolicy);
         } catch (java.sql.SQLException e) {
+            if (database != null) {
+                try {
+                    database.close();
+                } catch (IOException closeFailure) {
+                    e.addSuppressed(closeFailure);
+                }
+            }
             throw new IOException("failed to open vigil database", e);
         }
     }
@@ -99,13 +109,25 @@ public final class GuardRuntime implements Closeable {
         return modPolicy.ruleCount();
     }
 
+    public long auditRetentionDays() {
+        return TimeUnit.MILLISECONDS.toDays(config.auditRetentionMillis());
+    }
+
+    public boolean blocksAdmission(String playerId, long nowMillis) {
+        return bans.blocksAdmission(playerId, nowMillis);
+    }
+
     public JoinOutcome onPlayerJoin(String playerId, long nowMillis) {
+        return onPlayerJoin(playerId, playerId, nowMillis);
+    }
+
+    public JoinOutcome onPlayerJoin(String playerId, Object connection, long nowMillis) {
         Optional<BanRecord> active = safeActiveBan(playerId, nowMillis);
         if (active.isPresent()) {
             BanRecord record = active.get();
             return JoinOutcome.denied("banned: " + record.reason());
         }
-        SignedChallenge signed = handshake.issueChallenge(playerId, nowMillis);
+        SignedChallenge signed = handshake.issueChallenge(playerId, connection, nowMillis);
         byte[] payload = ChallengePayload.encode(signed.challenge(), signed.signature());
         byte[] frame = EnvelopeCodec.encode(
                 Envelope.of(MessageType.CHALLENGE, Direction.SERVER_TO_CLIENT, 0L, payload));
@@ -115,6 +137,10 @@ public final class GuardRuntime implements Closeable {
     }
 
     public AuthEvaluation onAuthFrame(String playerId, byte[] frame, long nowMillis) {
+        return onAuthFrame(playerId, playerId, frame, nowMillis);
+    }
+
+    public AuthEvaluation onAuthFrame(String playerId, Object connection, byte[] frame, long nowMillis) {
         Envelope envelope;
         try {
             envelope = EnvelopeCodec.decode(frame);
@@ -124,7 +150,7 @@ public final class GuardRuntime implements Closeable {
             return new AuthEvaluation(AuthOutcome.failed(AuthFailure.REPORT_MALFORMED), null);
         }
         if (envelope.type() != MessageType.AUTH
-                || envelope.direction() != Direction.CLIENT_TO_SERVER) {
+                || envelope.direction() != Direction.CLIENT_TO_SERVER || envelope.sequence() != 0L) {
             appendAudit(EVENT_AUTH_FAILED, playerId, "unexpected=" + envelope.type(), nowMillis);
             listener.onHandshakeFailed(playerId, AuthFailure.REPORT_MALFORMED);
             return new AuthEvaluation(AuthOutcome.failed(AuthFailure.REPORT_MALFORMED), null);
@@ -139,7 +165,7 @@ public final class GuardRuntime implements Closeable {
             return new AuthEvaluation(AuthOutcome.failed(AuthFailure.REPORT_MALFORMED), null);
         }
 
-        AuthOutcome outcome = handshake.authenticate(request, nowMillis);
+        AuthOutcome outcome = handshake.authenticate(playerId, connection, request, nowMillis);
         if (!outcome.isSuccess()) {
             appendAudit(EVENT_AUTH_FAILED, playerId, "reason=" + outcome.failure(), nowMillis);
             listener.onHandshakeFailed(playerId, outcome.failure());
@@ -147,12 +173,14 @@ public final class GuardRuntime implements Closeable {
         }
 
         ClientReport report = outcome.result().report();
-        ModPolicy.Result modResult = modPolicy.evaluate(report.mods());
+        boolean inventoryComplete = ModPolicy.inventoryComplete(report);
+        ModPolicy.Result modResult = modPolicy.evaluate(report.mods(), inventoryComplete);
         Verdict verdict = decision.evaluate(report, modResult.observations());
         appendAudit(
                 EVENT_AUTH_OK,
                 playerId,
-                "mods=" + report.mods().size() + " obs=" + report.observations().size(),
+                "mods=" + report.mods().size() + " obs=" + report.observations().size()
+                        + " inventory=" + (inventoryComplete ? "complete" : "incomplete"),
                 nowMillis);
         if (!modResult.clean()) {
             appendAudit(EVENT_MOD_POLICY, playerId, modResult.summary(), nowMillis);
@@ -174,6 +202,11 @@ public final class GuardRuntime implements Closeable {
             String reason,
             long durationMillis,
             long nowMillis) {
+        return banBy("system", playerId, playerName, reason, durationMillis, nowMillis);
+    }
+
+    public boolean banBy(String actor, String playerId, String playerName, String reason,
+            long durationMillis, long nowMillis) {
         if (playerId == null || playerId.isEmpty() || playerId.length() > 64) {
             throw new IllegalArgumentException("playerId is required and bounded");
         }
@@ -193,26 +226,30 @@ public final class GuardRuntime implements Closeable {
         }
         try {
             bans.ban(playerId, playerName, safeReason, nowMillis, expiresAt);
-            appendAudit(EVENT_BAN, playerId, safeReason, nowMillis);
+            appendAudit(EVENT_BAN, playerId, "actor=" + actor + " reason=" + safeReason, nowMillis);
             listener.onActionRequired(playerId, VerdictAction.BAN, safeReason);
             return true;
         } catch (StorageException e) {
-            appendAudit(EVENT_BAN, playerId, "storage-failure", nowMillis);
+            appendAudit(EVENT_BAN, playerId, "actor=" + actor + " storage-failure", nowMillis);
             listener.onActionRequired(playerId, VerdictAction.ALERT, "ban storage failure");
             return false;
         }
     }
 
     public int unban(String playerId, long nowMillis) {
+        return unbanBy("system", playerId, nowMillis);
+    }
+
+    public int unbanBy(String actor, String playerId, long nowMillis) {
         if (playerId == null || playerId.isEmpty() || playerId.length() > 64) {
             throw new IllegalArgumentException("playerId is required and bounded");
         }
         try {
             int changed = bans.unban(playerId);
-            appendAudit(EVENT_UNBAN, playerId, "count=" + changed, nowMillis);
+            appendAudit(EVENT_UNBAN, playerId, "actor=" + actor + " count=" + changed, nowMillis);
             return changed;
         } catch (StorageException e) {
-            appendAudit(EVENT_UNBAN, playerId, "storage-failure", nowMillis);
+            appendAudit(EVENT_UNBAN, playerId, "actor=" + actor + " storage-failure", nowMillis);
             listener.onActionRequired(playerId, VerdictAction.ALERT, "unban storage failure");
             return 0;
         }
@@ -223,6 +260,11 @@ public final class GuardRuntime implements Closeable {
     }
 
     public void onPlayerQuit(String playerId, long nowMillis) {
+        onPlayerQuit(playerId, playerId, nowMillis);
+    }
+
+    public void onPlayerQuit(String playerId, Object connection, long nowMillis) {
+        handshake.closeConnection(playerId, connection);
         appendAudit("VIGIL-QUIT", playerId, null, nowMillis);
     }
 

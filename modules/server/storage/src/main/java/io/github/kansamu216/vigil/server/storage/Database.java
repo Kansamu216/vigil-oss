@@ -48,14 +48,23 @@ public final class Database implements Closeable {
             throw new SQLException("SQLite JDBC driver is not available", e);
         }
         Connection connection = DriverManager.getConnection(url);
-        try (Statement statement = connection.createStatement()) {
-            statement.execute("PRAGMA journal_mode = WAL");
-            statement.execute("PRAGMA foreign_keys = ON");
-            statement.execute("PRAGMA busy_timeout = 3000");
+        try {
+            try (Statement statement = connection.createStatement()) {
+                statement.execute("PRAGMA journal_mode = WAL");
+                statement.execute("PRAGMA foreign_keys = ON");
+                statement.execute("PRAGMA busy_timeout = 3000");
+            }
+            Database database = new Database(connection);
+            database.migrate();
+            return database;
+        } catch (SQLException | RuntimeException e) {
+            try {
+                connection.close();
+            } catch (SQLException closeFailure) {
+                e.addSuppressed(closeFailure);
+            }
+            throw e;
         }
-        Database database = new Database(connection);
-        database.migrate();
-        return database;
     }
 
     public Connection connection() {

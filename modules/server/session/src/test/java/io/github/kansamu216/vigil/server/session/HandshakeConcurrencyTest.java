@@ -46,7 +46,7 @@ class HandshakeConcurrencyTest {
                     public AuthOutcome call() throws Exception {
                         ready.countDown();
                         start.await();
-                        return service.authenticate(request, 1_700_000_001_000L);
+                        return service.authenticate("player-uuid-1", request, 1_700_000_001_000L);
                     }
                 });
             }

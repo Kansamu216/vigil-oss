@@ -9,6 +9,7 @@ final class SessionRecord {
 
     private final String sessionId;
     private final String playerId;
+    private final Object connection;
     private final Challenge challenge;
 
     private SessionState state = SessionState.CHALLENGED;
@@ -16,9 +17,10 @@ final class SessionRecord {
     private int failedAttempts;
     private long lastSequence = -1L;
 
-    SessionRecord(String sessionId, String playerId, Challenge challenge, long nowMillis) {
+    SessionRecord(String sessionId, String playerId, Object connection, Challenge challenge, long nowMillis) {
         this.sessionId = sessionId;
         this.playerId = playerId;
+        this.connection = connection;
         this.challenge = challenge;
         this.lastActivityMillis = nowMillis;
     }
@@ -29,6 +31,10 @@ final class SessionRecord {
 
     String playerId() {
         return playerId;
+    }
+
+    boolean belongsTo(String playerId, Object connection) {
+        return this.playerId.equals(playerId) && this.connection.equals(connection);
     }
 
     Challenge challenge() {

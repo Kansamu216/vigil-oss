@@ -17,6 +17,7 @@ import io.github.kansamu216.vigil.protocol.ProtocolVersion;
 import io.github.kansamu216.vigil.protocol.payload.ReportPayload;
 import java.nio.charset.Charset;
 import java.security.KeyPair;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -60,12 +61,17 @@ public final class HandshakeService {
     }
 
     /**
-     * 为玩家签发一次性挑战。玩家重复进服会得到新会话，旧会话自然过期。
+     * 为玩家签发一次性挑战。玩家重复进服会关闭旧会话。
      */
     public SignedChallenge issueChallenge(String playerId, long nowMillis) {
+        return issueChallenge(playerId, playerId, nowMillis);
+    }
+
+    public SignedChallenge issueChallenge(String playerId, Object connection, long nowMillis) {
         if (playerId == null || playerId.isEmpty()) {
             throw new IllegalArgumentException("playerId is required");
         }
+        Objects.requireNonNull(connection, "connection");
         String sessionId = UUID.randomUUID().toString();
         String nonce = KeyFingerprint.hex(Secrets.randomBytes(16));
         Challenge challenge = new Challenge(
@@ -81,17 +87,24 @@ public final class HandshakeService {
         } catch (CryptoException e) {
             throw new IllegalStateException("server key cannot sign challenge", e);
         }
-        sessions.put(new SessionRecord(sessionId, playerId, challenge, nowMillis));
+        sessions.put(new SessionRecord(sessionId, playerId, connection, challenge, nowMillis));
         return new SignedChallenge(challenge, signature);
     }
 
-    public AuthOutcome authenticate(AuthRequest request, long nowMillis) {
-        if (!authLimiter.tryAcquire(request.sessionId(), nowMillis)) {
-            return AuthOutcome.failed(AuthFailure.RATE_LIMITED);
-        }
+    public AuthOutcome authenticate(String playerId, AuthRequest request, long nowMillis) {
+        return authenticate(playerId, playerId, request, nowMillis);
+    }
+
+    public AuthOutcome authenticate(String playerId, Object connection, AuthRequest request, long nowMillis) {
         SessionRecord record = sessions.get(request.sessionId());
         if (record == null) {
             return AuthOutcome.failed(AuthFailure.UNKNOWN_SESSION);
+        }
+        if (!record.belongsTo(playerId, connection)) {
+            return AuthOutcome.failed(AuthFailure.CONNECTION_MISMATCH);
+        }
+        if (!authLimiter.tryAcquire(record.sessionId(), nowMillis)) {
+            return AuthOutcome.failed(AuthFailure.RATE_LIMITED);
         }
         // 同一时刻只有一个线程能推进某个会话的状态与序号；其他会话仍可并行。
         // 并发重放同一 AUTH 帧时，只有第一个能通过状态检查。
@@ -144,43 +157,41 @@ public final class HandshakeService {
                 MessageType.AUTH.id(),
                 Direction.CLIENT_TO_SERVER,
                 0L);
-        byte[] plain;
+        byte[] plain = null;
+        boolean authenticated = false;
         try {
-            plain = AeadCipher.unseal(
-                    sessionKey,
-                    sessionIdBytes,
-                    Direction.CLIENT_TO_SERVER.wireValue(),
-                    0L,
-                    aad,
-                    request.encryptedReport());
+            plain = AeadCipher.unseal(sessionKey, sessionIdBytes, Direction.CLIENT_TO_SERVER.wireValue(),
+                    0L, aad, request.encryptedReport());
+            ClientReport report = ReportPayload.decode(plain);
+            if (!ProtocolVersion.isSupported(report.protocolVersion())) {
+                record.recordFailure();
+                return AuthOutcome.failed(AuthFailure.REPORT_MALFORMED);
+            }
+            if (!report.nonce().equals(challenge.nonce()) || !report.playerId().equals(record.playerId())) {
+                record.recordFailure();
+                return AuthOutcome.failed(AuthFailure.NONCE_MISMATCH);
+            }
+            AuthOutcome outcome = AuthOutcome.success(AuthResult.of(challenge, report, sessionKey));
+            record.state(SessionState.AUTHENTICATED);
+            record.touch(nowMillis);
+            authenticated = true;
+            return outcome;
         } catch (CryptoException e) {
-            Secrets.wipe(sessionKey);
             record.recordFailure();
             return AuthOutcome.failed(AuthFailure.REPORT_DECRYPT_FAILED);
-        }
-
-        ClientReport report;
-        try {
-            report = ReportPayload.decode(plain);
         } catch (ProtocolException e) {
-            Secrets.wipe(plain);
-            Secrets.wipe(sessionKey);
             record.recordFailure();
             return AuthOutcome.failed(AuthFailure.REPORT_MALFORMED);
+        } finally {
+            Secrets.wipe(plain);
+            if (!authenticated) {
+                Secrets.wipe(sessionKey);
+            }
         }
-        Secrets.wipe(plain);
+    }
 
-        // 报告必须绑定本次挑战与本次会话的玩家，防止跨会话搬运报告。
-        if (!report.nonce().equals(challenge.nonce())
-                || !report.playerId().equals(record.playerId())) {
-            Secrets.wipe(sessionKey);
-            record.recordFailure();
-            return AuthOutcome.failed(AuthFailure.NONCE_MISMATCH);
-        }
-
-        record.state(SessionState.AUTHENTICATED);
-        record.touch(nowMillis);
-        return AuthOutcome.success(AuthResult.of(challenge, report, sessionKey));
+    public void closeConnection(String playerId, Object connection) {
+        sessions.closeConnection(playerId, connection);
     }
 
     /** 保活：只刷新活动时间，序号必须单调，复用序号视为重放。 */
