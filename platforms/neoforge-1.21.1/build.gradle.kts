@@ -8,7 +8,7 @@ plugins {
 }
 
 group = "io.github.kansamu216.vigil.platform"
-version = "0.1.0-dev.2"
+version = "0.1.0-dev.3"
 
 java {
     toolchain {

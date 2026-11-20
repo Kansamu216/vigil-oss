@@ -5,7 +5,10 @@ import io.github.kansamu216.vigil.model.EvidenceLevel;
 import io.github.kansamu216.vigil.model.Observation;
 import io.github.kansamu216.vigil.model.Verdict;
 import io.github.kansamu216.vigil.model.VerdictAction;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 
 public final class DecisionEngine {
@@ -20,19 +23,34 @@ public final class DecisionEngine {
     }
 
     public Verdict evaluate(ClientReport report) {
-        return evaluate(report, ServerEvidence.none());
+        return evaluate(report, Collections.<Observation>emptyList(), ServerEvidence.none());
     }
 
     public Verdict evaluate(ClientReport report, ServerEvidence verification) {
+        return evaluate(report, Collections.<Observation>emptyList(), verification);
+    }
+
+    public Verdict evaluate(ClientReport report, List<Observation> serverObservations) {
+        return evaluate(report, serverObservations, ServerEvidence.none());
+    }
+
+    public Verdict evaluate(
+            ClientReport report,
+            List<Observation> serverObservations,
+            ServerEvidence verification) {
         if (verification == null) {
             verification = ServerEvidence.none();
+        }
+        List<Observation> observations = new ArrayList<Observation>(report.observations());
+        if (serverObservations != null) {
+            observations.addAll(serverObservations);
         }
         int clientScore = 0;
         int usable = 0;
         boolean onlyStatistics = true;
         Set<String> codes = new LinkedHashSet<String>();
 
-        for (Observation observation : report.observations()) {
+        for (Observation observation : observations) {
             String code = observation.code();
             if (code.startsWith(COLLECT_PREFIX)) {
                 continue;

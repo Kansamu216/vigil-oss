@@ -30,4 +30,14 @@ public final class Reports {
         return new ClientReport(
                 1, nonce, playerId, "tester", new ArrayList<ModEntry>(), list, SHA, 1_700_000_000_000L);
     }
+
+    public static ClientReport withMods(String nonce, String playerId, ModEntry... mods) {
+        List<ModEntry> list = new ArrayList<ModEntry>();
+        for (ModEntry mod : mods) {
+            list.add(mod);
+        }
+        return new ClientReport(
+                1, nonce, playerId, "tester", list,
+                new ArrayList<Observation>(), SHA, 1_700_000_000_000L);
+    }
 }

@@ -9,6 +9,8 @@ import io.github.kansamu216.vigil.crypto.RsaOaep;
 import io.github.kansamu216.vigil.model.AuthRequest;
 import io.github.kansamu216.vigil.model.Challenge;
 import io.github.kansamu216.vigil.model.ClientReport;
+import io.github.kansamu216.vigil.model.EvidenceLevel;
+import io.github.kansamu216.vigil.model.ModEntry;
 import io.github.kansamu216.vigil.model.Observation;
 import io.github.kansamu216.vigil.model.Verdict;
 import io.github.kansamu216.vigil.model.VerdictAction;
@@ -17,11 +19,13 @@ import io.github.kansamu216.vigil.protocol.MessageType;
 import io.github.kansamu216.vigil.protocol.ProtocolException;
 import io.github.kansamu216.vigil.protocol.payload.ChallengePayload;
 import io.github.kansamu216.vigil.server.decision.DecisionPolicy;
+import io.github.kansamu216.vigil.server.decision.ModPolicy;
 import io.github.kansamu216.vigil.testsupport.session.ReferenceClient;
 import io.github.kansamu216.vigil.testsupport.session.Reports;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.KeyPair;
+import java.util.Arrays;
 import org.junit.jupiter.api.Test;
 
 class GuardRuntimeTest {
@@ -110,6 +114,34 @@ class GuardRuntimeTest {
 
             JoinOutcome second = runtime.onPlayerJoin(PLAYER, NOW + 300L);
             assertTrue(second.allowed());
+        }
+    }
+
+    @Test
+    void modPolicyOnlyAlertsWithoutBan() throws Exception {
+        Path file = Files.createTempDirectory("vigil-rt").resolve("vigil.db");
+        KeyPair keys = RsaOaep.generateKeyPair();
+        RecordingListener listener = new RecordingListener();
+        DecisionPolicy aggressive = new DecisionPolicy(10, 40, 60, 90, true, true);
+        ModPolicy policy = ModPolicy.parse(Arrays.asList("minecraft 1.21.1 *"));
+        String sha = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+
+        try (GuardRuntime runtime =
+                GuardRuntime.open(configFor(file, aggressive), keys, listener, policy)) {
+            JoinOutcome join = runtime.onPlayerJoin(PLAYER, NOW);
+            Challenge challenge = challengeOf(join.challengeFrame());
+            ReferenceClient client = new ReferenceClient(keys.getPublic(), runtime.publicKeyFingerprint());
+            ClientReport report = Reports.withMods(
+                    challenge.nonce(), PLAYER,
+                    new ModEntry("minecraft", "1.21.1", "client.jar", 1024L, sha),
+                    new ModEntry("unlisted", "1.0", "unlisted.jar", 1L, sha));
+            verifyClient(client, challenge, join.challengeFrame());
+            AuthRequest request = client.respond(challenge, report, 0L);
+
+            AuthEvaluation evaluation = runtime.onAuthFrame(PLAYER, authFrame(request), NOW + 100L);
+            assertEquals(EvidenceLevel.OBSERVATION, evaluation.verdict().level());
+            assertEquals(VerdictAction.ALERT, evaluation.verdict().action());
+            assertEquals(0, runtime.activeBanCount(NOW + 200L));
         }
     }
 

@@ -4,6 +4,7 @@ import io.github.kansamu216.vigil.model.VerdictAction;
 import io.github.kansamu216.vigil.platform.neoforge1211.VigilNeoForge;
 import io.github.kansamu216.vigil.platform.neoforge1211.network.VigilFramePayload;
 import io.github.kansamu216.vigil.platform.neoforge1211.network.VigilNetwork;
+import io.github.kansamu216.vigil.server.decision.ModPolicy;
 import io.github.kansamu216.vigil.server.runtime.AuthEvaluation;
 import io.github.kansamu216.vigil.server.runtime.GuardRuntime;
 import io.github.kansamu216.vigil.server.runtime.JoinOutcome;
@@ -57,19 +58,21 @@ public final class VigilServer {
             ServerSettings settings = ServerSettings.load(base.resolve(ServerSettings.FILE_NAME));
             ServerConfig config = settings.toServerConfig(base.resolve("data"));
             ServerKeyStore keys = ServerKeyStore.loadOrCreate(base.resolve("keys"));
+            ModPolicy modPolicy = ModPolicy.loadIfExists(base.resolve("mods.txt"));
             for (String warning : settings.warnings()) {
                 LOGGER.warn("[VIGIL-CONFIG] {}", warning);
             }
 
-            runtime = GuardRuntime.open(config, keys.keyPair(), new ActionListener());
+            runtime = GuardRuntime.open(config, keys.keyPair(), new ActionListener(), modPolicy);
             worker = Executors.newSingleThreadExecutor(new WorkerFactory());
             VigilNetwork.setSink(VigilServer::onFrame);
 
             LOGGER.info(
-                    "[VIGIL-SERVER-001] runtime ready fingerprint={} autoBan={} autoKick={}",
+                    "[VIGIL-SERVER-001] runtime ready fingerprint={} autoBan={} autoKick={} modRules={}",
                     keys.fingerprint(),
                     config.decisionPolicy().autoBanEnabled(),
-                    config.decisionPolicy().autoKickEnabled());
+                    config.decisionPolicy().autoKickEnabled(),
+                    modPolicy.ruleCount());
         } catch (IOException | RuntimeException e) {
             runtime = null;
             worker = null;

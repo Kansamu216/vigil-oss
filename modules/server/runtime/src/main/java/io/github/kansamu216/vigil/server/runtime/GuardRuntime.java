@@ -12,6 +12,7 @@ import io.github.kansamu216.vigil.protocol.ProtocolException;
 import io.github.kansamu216.vigil.protocol.payload.AuthPayload;
 import io.github.kansamu216.vigil.protocol.payload.ChallengePayload;
 import io.github.kansamu216.vigil.server.decision.DecisionEngine;
+import io.github.kansamu216.vigil.server.decision.ModPolicy;
 import io.github.kansamu216.vigil.server.session.AuthFailure;
 import io.github.kansamu216.vigil.server.session.AuthOutcome;
 import io.github.kansamu216.vigil.server.session.HandshakeService;
@@ -32,6 +33,7 @@ public final class GuardRuntime implements Closeable {
     private static final String EVENT_CHALLENGE = "VIGIL-CHALLENGE";
     private static final String EVENT_AUTH_FAILED = "VIGIL-AUTH-FAILED";
     private static final String EVENT_AUTH_OK = "VIGIL-AUTH-OK";
+    private static final String EVENT_MOD_POLICY = "VIGIL-MOD-POLICY";
     private static final String EVENT_VERDICT = "VIGIL-VERDICT";
     private static final String EVENT_BAN = "VIGIL-BAN";
 
@@ -43,6 +45,7 @@ public final class GuardRuntime implements Closeable {
     private final BanRepository bans;
     private final AuditRepository audit;
     private final RuntimeListener listener;
+    private final ModPolicy modPolicy;
 
     private GuardRuntime(
             ServerConfig config,
@@ -50,7 +53,8 @@ public final class GuardRuntime implements Closeable {
             HandshakeService handshake,
             DecisionEngine decision,
             Database database,
-            RuntimeListener listener) {
+            RuntimeListener listener,
+            ModPolicy modPolicy) {
         this.config = config;
         this.sessions = sessions;
         this.handshake = handshake;
@@ -59,10 +63,19 @@ public final class GuardRuntime implements Closeable {
         this.bans = new BanRepository(database);
         this.audit = new AuditRepository(database);
         this.listener = listener;
+        this.modPolicy = modPolicy == null ? ModPolicy.disabled() : modPolicy;
     }
 
     public static GuardRuntime open(
             ServerConfig config, KeyPair serverKeyPair, RuntimeListener listener) throws IOException {
+        return open(config, serverKeyPair, listener, ModPolicy.disabled());
+    }
+
+    public static GuardRuntime open(
+            ServerConfig config,
+            KeyPair serverKeyPair,
+            RuntimeListener listener,
+            ModPolicy modPolicy) throws IOException {
         try {
             Database database = Database.open(java.nio.file.Paths.get(config.databasePath()));
             SessionRegistry sessions = new SessionRegistry(config.maxSessions());
@@ -71,7 +84,7 @@ public final class GuardRuntime implements Closeable {
             DecisionEngine decision = new DecisionEngine(config.decisionPolicy());
             return new GuardRuntime(
                     config, sessions, handshake, decision, database,
-                    listener == null ? RuntimeListener.NOOP : listener);
+                    listener == null ? RuntimeListener.NOOP : listener, modPolicy);
         } catch (java.sql.SQLException e) {
             throw new IOException("failed to open vigil database", e);
         }
@@ -129,12 +142,16 @@ public final class GuardRuntime implements Closeable {
         }
 
         ClientReport report = outcome.result().report();
-        Verdict verdict = decision.evaluate(report);
+        ModPolicy.Result modResult = modPolicy.evaluate(report.mods());
+        Verdict verdict = decision.evaluate(report, modResult.observations());
         appendAudit(
                 EVENT_AUTH_OK,
                 playerId,
                 "mods=" + report.mods().size() + " obs=" + report.observations().size(),
                 nowMillis);
+        if (!modResult.clean()) {
+            appendAudit(EVENT_MOD_POLICY, playerId, modResult.summary(), nowMillis);
+        }
         appendAudit(EVENT_VERDICT, playerId, verdict.toString(), nowMillis);
         listener.onVerdict(playerId, verdict);
 

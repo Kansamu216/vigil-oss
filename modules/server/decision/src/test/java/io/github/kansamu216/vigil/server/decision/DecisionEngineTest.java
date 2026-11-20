@@ -8,6 +8,7 @@ import io.github.kansamu216.vigil.model.Observation;
 import io.github.kansamu216.vigil.model.Verdict;
 import io.github.kansamu216.vigil.model.VerdictAction;
 import io.github.kansamu216.vigil.testsupport.session.Reports;
+import java.util.Arrays;
 import org.junit.jupiter.api.Test;
 
 class DecisionEngineTest {
@@ -97,6 +98,16 @@ class DecisionEngineTest {
                 ServerEvidence.corroboratedByServer(2, 50, "SERVER_TWO_CHECKS"));
         assertEquals(EvidenceLevel.CORROBORATED, verdict.level());
         assertEquals(VerdictAction.KICK, verdict.action());
+    }
+
+    @Test
+    void serverPolicyObservationsStayObservations() {
+        DecisionPolicy enabled = new DecisionPolicy(10, 40, 60, 90, true, true);
+        Verdict verdict = new DecisionEngine(enabled).evaluate(
+                report(),
+                Arrays.asList(new Observation("MOD_POLICY_HASH", "count=1", 100)));
+        assertEquals(EvidenceLevel.OBSERVATION, verdict.level());
+        assertEquals(VerdictAction.ALERT, verdict.action());
     }
 
     @Test
