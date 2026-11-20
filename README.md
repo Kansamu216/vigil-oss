@@ -10,7 +10,10 @@ Minecraft 服务端会话校验与观测组件。
 ./gradlew build
 ./gradlew publishModules
 ./gradlew -p platforms/neoforge-1.21.1 build
+./gradlew -p platforms/neoforge-1.21.1 obfuscateJars
 ```
+
+发布产物位于 `platforms/neoforge-1.21.1/build/obfuscated/`。
 
 ## 配置
 

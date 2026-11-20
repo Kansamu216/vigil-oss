@@ -39,6 +39,7 @@ val sharedCore: Configuration by configurations.creating
 val serverCore: Configuration by configurations.creating
 val clientCore: Configuration by configurations.creating
 val devCore: Configuration by configurations.creating
+val proguardTool: Configuration by configurations.creating
 
 val serverSourceSet = sourceSets.create("server") {
     java.srcDir("src/server/java")
@@ -81,6 +82,8 @@ dependencies {
 
     devCore("$coreGroup:client-agent:$coreVersion")
     devCore("$coreGroup:client-mod-sensor:$coreVersion")
+
+    proguardTool("com.guardsquare:proguard-base:7.10.0")
 }
 
 val coreDevSourceSet = sourceSets.create("coreDev") {
@@ -268,6 +271,149 @@ val verifySideJars = tasks.register("verifySideJars") {
             serverFile.name, clientFile.name, clientInternalNamespace
         )
     }
+}
+
+val obfuscatedDir = layout.buildDirectory.dir("obfuscated")
+
+fun proguardLibraries(sourceSet: SourceSet): List<File> {
+    val moduleRepo = rootDir.resolve("../../build/module-repo").canonicalFile
+    val jars = (sourceSet.compileClasspath.files + configurations["compileClasspath"].files)
+        .filter { it.isFile && it.name.endsWith(".jar") }
+        .filterNot { it.canonicalPath.startsWith(moduleRepo.path) }
+        .filterNot {
+            it.name.startsWith("shared-") ||
+                it.name.startsWith("server-") ||
+                it.name.startsWith("client-")
+        }
+        .distinctBy { it.canonicalPath }
+    val jmods = fileTree(File(System.getProperty("java.home")).resolve("jmods")) {
+        include("*.jmod")
+    }.files
+    return (jars + jmods).distinctBy { it.canonicalPath }
+}
+
+fun proguardPath(file: File): String = "\"" + file.absolutePath.replace("\\", "\\\\") + "\""
+
+fun writeProguardConfig(
+    configFile: File,
+    input: File,
+    output: File,
+    mapping: File,
+    libraries: List<File>,
+    side: String,
+) {
+    val keep = mutableListOf(
+        "-keep class io.github.kansamu216.vigil.platform.neoforge1211.VigilNeoForge { *; }",
+        "-keep class io.github.kansamu216.vigil.platform.neoforge1211.channel.** { *; }",
+        "-keep class io.github.kansamu216.vigil.platform.neoforge1211.network.** { *; }",
+        "-keep class org.sqlite.** { *; }",
+        "-keep class org.slf4j.** { *; }",
+        "-keepclassmembers class * { @net.neoforged.bus.api.SubscribeEvent <methods>; }",
+    )
+    when (side) {
+        "server" -> keep +=
+            "-keep class io.github.kansamu216.vigil.platform.neoforge1211.server.VigilServer { *; }"
+        "client" -> keep +=
+            "-keep class io.github.kansamu216.vigil.platform.neoforge1211.client.VigilClient { *; }"
+    }
+    val text = buildString {
+        appendLine("-injars ${proguardPath(input)}")
+        appendLine("-outjars ${proguardPath(output)}")
+        libraries.forEach { appendLine("-libraryjars ${proguardPath(it)}") }
+        appendLine("-dontshrink")
+        appendLine("-dontoptimize")
+        appendLine("-dontnote")
+        appendLine("-dontwarn **")
+        appendLine("-ignorewarnings")
+        appendLine("-dontusemixedcaseclassnames")
+        appendLine("-allowaccessmodification")
+        appendLine("-repackageclasses 'a'")
+        appendLine("-keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod,MethodParameters,Record,Exceptions")
+        keep.forEach { appendLine(it) }
+        appendLine("-printmapping ${proguardPath(mapping)}")
+    }
+    configFile.parentFile.mkdirs()
+    mapping.parentFile.mkdirs()
+    configFile.writeText(text, Charsets.UTF_8)
+}
+
+fun registerObfuscationTask(
+    name: String,
+    side: String,
+    jarTask: TaskProvider<ShadowJar>,
+    sourceSet: SourceSet,
+): TaskProvider<JavaExec> = tasks.register<JavaExec>(name) {
+    group = "build"
+    description = "Builds the obfuscated $side release jar."
+    dependsOn(jarTask)
+    classpath = proguardTool
+    mainClass.set("proguard.ProGuard")
+    maxHeapSize = "2g"
+    val input = jarTask.flatMap { it.archiveFile }
+    val output = obfuscatedDir.get().file("vigil-$side-neoforge-1.21.1-${project.version}.jar").asFile
+    val mapping = obfuscatedDir.get().file("mapping/$side.txt").asFile
+    inputs.file(input)
+    outputs.file(output)
+    doFirst {
+        val inputFile = input.get().asFile
+        val configFile = obfuscatedDir.get().file("proguard-$side.pro").asFile
+        writeProguardConfig(configFile, inputFile, output, mapping, proguardLibraries(sourceSet), side)
+        args("@${configFile.absolutePath}")
+    }
+}
+
+val obfuscateServerJar = registerObfuscationTask("obfuscateServerJar", "server", serverJar, serverSourceSet)
+val obfuscateClientJar = registerObfuscationTask("obfuscateClientJar", "client", clientJar, clientSourceSet)
+
+val verifyObfuscatedJars = tasks.register("verifyObfuscatedJars") {
+    group = "verification"
+    description = "Checks the obfuscated release jars."
+    dependsOn(obfuscateServerJar, obfuscateClientJar)
+
+    doLast {
+        val problems = mutableListOf<String>()
+        val files = listOf(
+            "server" to obfuscatedDir.get().file("vigil-server-neoforge-1.21.1-${project.version}.jar").asFile,
+            "client" to obfuscatedDir.get().file("vigil-client-neoforge-1.21.1-${project.version}.jar").asFile,
+        )
+        files.forEach { (side, file) ->
+            if (!file.isFile) {
+                problems += "$side obfuscated jar missing"
+                return@forEach
+            }
+            val entries = zipEntries(file)
+            if ("META-INF/neoforge.mods.toml" !in entries) {
+                problems += "$side obfuscated jar has no mod metadata"
+            }
+            if (side == "server" && "META-INF/services/java.sql.Driver" !in entries) {
+                problems += "$side obfuscated jar has no JDBC service entry"
+            }
+            val classes = zipClasses(file)
+            if (classes.size < 20) {
+                problems += "$side obfuscated jar is too small"
+            }
+            if (classes.any { it.startsWith("$sharedRoot.") && !it.startsWith("$sharedRoot.platform.") }) {
+                problems += "$side obfuscated jar still exposes core class names"
+            }
+            if (classes.none { it.startsWith("a.") }) {
+                problems += "$side obfuscated jar was not repackaged"
+            }
+        }
+        val mapping = obfuscatedDir.get().file("mapping/server.txt").asFile
+        if (!mapping.isFile || mapping.length() == 0L) {
+            problems += "mapping file missing"
+        }
+        if (problems.isNotEmpty()) {
+            throw GradleException("Obfuscated jar verification failed:\n" + problems.joinToString("\n") { " - $it" })
+        }
+        logger.lifecycle("[VIGIL-OBFUSCATED] release jars verified")
+    }
+}
+
+tasks.register("obfuscateJars") {
+    group = "build"
+    description = "Builds and verifies obfuscated release jars."
+    dependsOn(verifyObfuscatedJars)
 }
 
 tasks.named("assemble") {
