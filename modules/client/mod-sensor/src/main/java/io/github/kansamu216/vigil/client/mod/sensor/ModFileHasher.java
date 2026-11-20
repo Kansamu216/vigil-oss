@@ -7,9 +7,6 @@ import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
-/**
- * Mod 文件流式摘要，供客户端后台线程使用。
- */
 public final class ModFileHasher {
 
     private static final char[] HEX = "0123456789abcdef".toCharArray();

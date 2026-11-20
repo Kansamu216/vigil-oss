@@ -5,9 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
-/**
- * 通道标识基线测试。
- */
 class VigilChannelsTest {
 
     @Test

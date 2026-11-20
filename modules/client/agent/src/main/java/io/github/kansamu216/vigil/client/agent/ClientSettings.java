@@ -7,11 +7,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Properties;
 
-/**
- * 客户端配置。
- *
- * <p>信任锚由部署者填写；未配置或格式非法时握手会被拒绝。</p>
- */
 public final class ClientSettings {
 
     public static final String FILE_NAME = "client.properties";
@@ -84,7 +79,6 @@ public final class ClientSettings {
         return fingerprint;
     }
 
-    /** 未配置或格式非法时的原因，用于启动日志；没有问题时返回 null。 */
     public String problem() {
         return problem;
     }

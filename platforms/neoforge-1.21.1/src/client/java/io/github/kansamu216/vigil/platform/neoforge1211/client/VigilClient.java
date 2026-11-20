@@ -35,11 +35,6 @@ import net.neoforged.neoforge.network.PacketDistributor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * 客户端适配层：读取信任锚、校验挑战、构建并回发报告。
- *
- * <p>未配置信任锚时不建立会话。</p>
- */
 @EventBusSubscriber(modid = VigilNeoForge.MOD_ID, bus = EventBusSubscriber.Bus.MOD)
 public final class VigilClient {
 
@@ -73,9 +68,6 @@ public final class VigilClient {
         });
     }
 
-    /**
-     * payload 回调运行在网络线程；这里切回客户端主线程再做解码与发送。
-     */
     private static void onFrame(Player player, byte[] frame) {
         Minecraft minecraft = Minecraft.getInstance();
         minecraft.execute(() -> handleFrame(player, frame));
@@ -127,7 +119,7 @@ public final class VigilClient {
             handledSessionId = challenge.sessionId();
             LOGGER.info("[VIGIL-CLIENT-004] handshake response sent mods={}", mods.size());
         } catch (ClientHandshakeException e) {
-            // 只记录失败类别，不打印公钥或报告内容。
+
             LOGGER.warn("[VIGIL-CLIENT-005] handshake rejected reason={}", e.reason());
         } catch (ProtocolException e) {
             LOGGER.warn("[VIGIL-CLIENT-006] malformed challenge code={}", e.code());

@@ -6,9 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.Random;
 import org.junit.jupiter.api.Test;
 
-/**
- * 解码器对变异输入的容错测试，单次测试 10,000 个样本。
- */
 class EnvelopeFuzzTest {
 
     private static final int ITERATIONS = 10_000;

@@ -1,14 +1,5 @@
 package io.github.kansamu216.vigil.protocol;
 
-/**
- * 信封编解码。
- *
- * <pre>
- * u16 version | u16 messageId | u8 direction | u64 sequence | u16 payloadLen | payload
- * </pre>
- *
- * <p>非法输入统一转换为 {@link ProtocolException}。</p>
- */
 public final class EnvelopeCodec {
 
     private EnvelopeCodec() {

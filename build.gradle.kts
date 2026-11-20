@@ -4,9 +4,6 @@ val sharedLibs = extensions
     .getByType(org.gradle.api.artifacts.VersionCatalogsExtension::class.java)
     .named("libs")
 
-// Versioned module artifacts are published to a project-local file repository
-// for local development and platform builds. Public releases can publish the
-// same publications to a public Maven repository without changing coordinates.
 val moduleRepository = rootProject.layout.buildDirectory.dir("module-repo")
 
 subprojects {
@@ -22,8 +19,7 @@ subprojects {
     apply(plugin = "maven-publish")
 
     configure<JavaPluginExtension> {
-        // The core stays on the Java 8 API surface; platform adapters choose
-        // their own Java version in independent builds.
+
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
     }

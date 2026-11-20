@@ -4,11 +4,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-/**
- * 客户端一次上报的内容：事实集合，不含最终结论。
- *
- * <p>报告绑定当次挑战的 nonce；字段有上限。</p>
- */
 public final class ClientReport {
 
     private final int protocolVersion;
@@ -49,7 +44,7 @@ public final class ClientReport {
         }
         if (fingerprintHash == null
                 || (!fingerprintHash.isEmpty() && fingerprintHash.length() != 64)) {
-            // 未采集指纹时发送空串。
+
             throw new IllegalArgumentException("fingerprint must be empty or 64 hex chars");
         }
         this.protocolVersion = protocolVersion;

@@ -1,28 +1,23 @@
 package io.github.kansamu216.vigil.client.agent;
 
-/**
- * 客户端握手失败原因。
- *
- * <p>只用于本地日志与状态展示；不下发给服务端。</p>
- */
 public class ClientHandshakeException extends Exception {
 
     private static final long serialVersionUID = 1L;
 
     public enum Reason {
-        /** 预置指纹与服务端公钥或挑战声明不一致。 */
+
         UNTRUSTED_SERVER,
-        /** 未配置信任锚。 */
+
         NO_TRUST_ANCHOR,
-        /** 公钥编码非法。 */
+
         INVALID_KEY,
-        /** 挑战签名无效。 */
+
         SIGNATURE_INVALID,
-        /** 挑战已过期。 */
+
         EXPIRED,
-        /** 挑战尚未通过校验。 */
+
         NOT_VERIFIED,
-        /** 报告与挑战不匹配。 */
+
         REPORT_MISMATCH
     }
 

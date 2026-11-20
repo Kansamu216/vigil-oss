@@ -9,9 +9,6 @@ import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-/**
- * 配置加载：默认文件、范围约束与数据库路径边界。
- */
 class ServerSettingsTest {
 
     private static final Charset UTF_8 = Charset.forName("UTF-8");

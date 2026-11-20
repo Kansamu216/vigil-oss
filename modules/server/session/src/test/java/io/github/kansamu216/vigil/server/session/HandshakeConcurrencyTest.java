@@ -18,9 +18,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 
-/**
- * 同一认证帧并发提交时只成功一次。
- */
 class HandshakeConcurrencyTest {
 
     @Test

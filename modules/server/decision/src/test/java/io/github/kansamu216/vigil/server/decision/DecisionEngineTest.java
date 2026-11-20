@@ -10,9 +10,6 @@ import io.github.kansamu216.vigil.model.VerdictAction;
 import io.github.kansamu216.vigil.testsupport.session.Reports;
 import org.junit.jupiter.api.Test;
 
-/**
- * 判定门槛回归测试。
- */
 class DecisionEngineTest {
 
     private static final String NONCE = "0123456789abcdef";

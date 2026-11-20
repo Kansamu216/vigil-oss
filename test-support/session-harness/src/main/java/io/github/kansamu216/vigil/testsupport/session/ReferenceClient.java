@@ -18,9 +18,6 @@ import io.github.kansamu216.vigil.protocol.payload.ReportPayload;
 import java.nio.charset.Charset;
 import java.security.PublicKey;
 
-/**
- * 测试用参考客户端：封装 {@link ClientSession} 并核对服务端公钥。
- */
 public final class ReferenceClient {
 
     private final PublicKey expectedPublicKey;
@@ -59,17 +56,11 @@ public final class ReferenceClient {
         session.acceptChallenge(challenge, signature, nowMillis);
     }
 
-    /**
-     * 测试用应答：使用挑战签发时间作为当前时间。
-     */
     public AuthRequest respond(Challenge challenge, ClientReport report, long sequence)
             throws ClientHandshakeException {
         return session.createAuthRequest(challenge, report, challenge.issuedAtMillis());
     }
 
-    /**
-     * 测试专用：使用给定公钥构造应答，用于密钥不匹配的用例。
-     */
     public static AuthRequest respondWithKey(PublicKey key, Challenge challenge, ClientReport report)
             throws CryptoException {
         if (!challenge.nonce().equals(report.nonce())) {

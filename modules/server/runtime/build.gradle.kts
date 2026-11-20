@@ -1,4 +1,3 @@
-// 运行时装配，不依赖加载器或 Minecraft 类型。
 dependencies {
     api(project(":modules:server:session"))
     api(project(":modules:server:decision"))

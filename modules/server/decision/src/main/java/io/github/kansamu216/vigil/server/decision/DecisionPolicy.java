@@ -1,10 +1,5 @@
 package io.github.kansamu216.vigil.server.decision;
 
-/**
- * 判定阈值。
- *
- * <p>默认只记录告警；调整阈值需有部署依据。</p>
- */
 public final class DecisionPolicy {
 
     private final int alertScore;
@@ -35,7 +30,6 @@ public final class DecisionPolicy {
         this.autoKickEnabled = autoKickEnabled;
     }
 
-    /** 默认策略：只告警，不自动处置。 */
     public static DecisionPolicy defaults() {
         return new DecisionPolicy(20, 50, 70, 90, false, false);
     }

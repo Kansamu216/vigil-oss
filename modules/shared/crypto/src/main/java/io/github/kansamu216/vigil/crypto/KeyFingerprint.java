@@ -4,11 +4,6 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 
-/**
- * 公钥指纹（SHA-256，小写十六进制）。
- *
- * <p>指纹用于核对服务器公钥；不匹配时拒绝连接。</p>
- */
 public final class KeyFingerprint {
 
     private static final char[] HEX = "0123456789abcdef".toCharArray();

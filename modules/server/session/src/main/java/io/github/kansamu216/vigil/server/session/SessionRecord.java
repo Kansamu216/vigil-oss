@@ -2,9 +2,6 @@ package io.github.kansamu216.vigil.server.session;
 
 import io.github.kansamu216.vigil.model.Challenge;
 
-/**
- * 会话记录。只在 session 模块内部修改，对外暴露只读快照。
- */
 final class SessionRecord {
 
     private final String sessionId;
@@ -59,9 +56,6 @@ final class SessionRecord {
         return ++failedAttempts;
     }
 
-    /**
-     * 记录并校验单调序号。返回 false 表示序号被复用或回退，应拒绝该报文。
-     */
     boolean acceptSequence(long sequence) {
         if (sequence <= lastSequence) {
             return false;

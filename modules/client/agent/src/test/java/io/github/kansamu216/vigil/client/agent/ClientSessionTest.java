@@ -17,9 +17,6 @@ import java.security.KeyPair;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-/**
- * 客户端信任锚与挑战校验。
- */
 class ClientSessionTest {
 
     private static final long NOW = 1_700_000_000_000L;

@@ -2,11 +2,6 @@ package io.github.kansamu216.vigil.server.runtime;
 
 import io.github.kansamu216.vigil.server.decision.DecisionPolicy;
 
-/**
- * 运行时配置。
- *
- * <p>加载后统一约束数值范围；重新加载使用原子快照。</p>
- */
 public final class ServerConfig {
 
     private final long challengeTtlMillis;
@@ -35,7 +30,6 @@ public final class ServerConfig {
         this.decisionPolicy = decisionPolicy == null ? DecisionPolicy.defaults() : decisionPolicy;
     }
 
-    /** 默认值：挑战 20 秒、空闲 120 秒、审计保留 30 天、4096 会话、只告警。 */
     public static ServerConfig defaults(String databasePath) {
         return new ServerConfig(
                 20_000L,

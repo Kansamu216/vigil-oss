@@ -27,12 +27,6 @@ import java.io.IOException;
 import java.security.KeyPair;
 import java.util.Optional;
 
-/**
- * 服务端运行时装配。
- *
- * <p>链路：进服检查 → 挑战下发 → 应答校验 → 判定 → 审计 → 处置回调。
- * 平台适配层只负责字节收发与动作执行。</p>
- */
 public final class GuardRuntime implements Closeable {
 
     private static final String EVENT_CHALLENGE = "VIGIL-CHALLENGE";
@@ -87,9 +81,6 @@ public final class GuardRuntime implements Closeable {
         return handshake.keyFingerprint();
     }
 
-    /**
-     * 玩家进服。已在封禁中的玩家直接拒绝。
-     */
     public JoinOutcome onPlayerJoin(String playerId, long nowMillis) {
         Optional<BanRecord> active = safeActiveBan(playerId, nowMillis);
         if (active.isPresent()) {
@@ -105,9 +96,6 @@ public final class GuardRuntime implements Closeable {
         return JoinOutcome.challenge(signed.challenge().sessionId(), frame);
     }
 
-    /**
-     * 处理一帧认证应答。失败只记审计，不产生处置。
-     */
     public AuthEvaluation onAuthFrame(String playerId, byte[] frame, long nowMillis) {
         Envelope envelope;
         try {
@@ -164,7 +152,7 @@ public final class GuardRuntime implements Closeable {
             appendAudit(EVENT_BAN, playerId, reason, nowMillis);
             listener.onActionRequired(playerId, VerdictAction.BAN, reason);
         } catch (StorageException e) {
-            // 存储故障进入降级，不产生封禁。
+
             appendAudit(EVENT_BAN, playerId, "storage-failure", nowMillis);
             listener.onActionRequired(playerId, VerdictAction.ALERT, "ban storage failure");
         }
@@ -174,14 +162,13 @@ public final class GuardRuntime implements Closeable {
         appendAudit("VIGIL-QUIT", playerId, null, nowMillis);
     }
 
-    /** 周期维护：关闭超时会话、清理过期封禁与审计。 */
     public void tick(long nowMillis) {
         sessions.closeIdle(nowMillis, config.sessionIdleTimeoutMillis());
         try {
             bans.purgeExpired(nowMillis);
             audit.purgeOlderThan(nowMillis - config.auditRetentionMillis());
         } catch (StorageException e) {
-            // 维护失败只影响清理。
+
             appendAudit("VIGIL-MAINTENANCE-FAILED", null, e.getMessage(), nowMillis);
         }
     }
@@ -198,7 +185,7 @@ public final class GuardRuntime implements Closeable {
         try {
             return bans.activeBan(playerId, nowMillis);
         } catch (StorageException e) {
-            // 存储不可用时放行进服，并记录审计。
+
             appendAudit("VIGIL-STORAGE-DEGRADED", playerId, "join-check-skipped", nowMillis);
             return Optional.empty();
         }
@@ -208,7 +195,7 @@ public final class GuardRuntime implements Closeable {
         try {
             audit.append(eventCode, playerId, detail, nowMillis);
         } catch (StorageException e) {
-            // 审计写失败不中断判定链路。
+
             listener.onActionRequired(playerId, VerdictAction.ALERT, "audit storage failure");
         }
     }

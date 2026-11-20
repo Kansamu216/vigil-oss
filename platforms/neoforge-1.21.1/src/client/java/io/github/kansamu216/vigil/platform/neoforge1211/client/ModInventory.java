@@ -11,11 +11,6 @@ import java.util.List;
 import net.neoforged.fml.ModList;
 import net.neoforged.neoforgespi.language.IModInfo;
 
-/**
- * 在后台线程构建 Mod 清单快照。
- *
- * <p>在后台线程计算摘要；单个文件失败只记录观测。</p>
- */
 final class ModInventory {
 
     private ModInventory() {

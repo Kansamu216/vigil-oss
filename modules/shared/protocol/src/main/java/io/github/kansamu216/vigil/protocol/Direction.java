@@ -1,6 +1,5 @@
 package io.github.kansamu216.vigil.protocol;
 
-/** 报文方向，作为 AAD 的一部分。 */
 public enum Direction {
 
     CLIENT_TO_SERVER(0),

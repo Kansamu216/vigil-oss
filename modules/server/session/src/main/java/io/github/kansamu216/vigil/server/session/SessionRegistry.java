@@ -7,12 +7,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * 会话表。
- *
- * <p>有界 LRU：达到上限时淘汰最久未活动的会话，而不是无限增长。
- * 关服时必须调用 {@link #clear()} 释放引用。</p>
- */
 public final class SessionRegistry {
 
     private final int maxSessions;
@@ -45,9 +39,6 @@ public final class SessionRegistry {
         return sessions.size();
     }
 
-    /**
-     * 关闭超时会话，返回被关闭的会话 id，供上层记审计。
-     */
     public synchronized List<String> closeIdle(long nowMillis, long idleTimeoutMillis) {
         List<String> closed = new ArrayList<String>();
         Iterator<Map.Entry<String, SessionRecord>> iterator = sessions.entrySet().iterator();
@@ -72,7 +63,6 @@ public final class SessionRegistry {
         return record == null ? SessionState.CLOSED : record.state();
     }
 
-    /** 关服或断线时清理，密钥引用随记录一起被丢弃。 */
     public synchronized void clear() {
         sessions.clear();
     }

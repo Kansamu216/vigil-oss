@@ -6,18 +6,6 @@ import javax.crypto.Cipher;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
-/**
- * AES-256-GCM 会话报文加密。
- *
- * <pre>
- * 密文布局：iv[12] || ciphertext || gcmTag[16]
- * AAD      ：由调用方按 AssociatedData 生成（version|sessionId|messageId|direction|sequence）
- * IV       ：sessionId 前 4 字节 || direction[1] || sequence 低 7 字节
- * </pre>
- *
- * <p>GCM 使用 12 字节 IV：sessionId 前 4 字节、方向 1 字节、序号低 7 字节。
- * {@link Cipher} 每次调用新建，不在线程间共享。</p>
- */
 public final class AeadCipher {
 
     public static final int KEY_BYTES = 32;
@@ -60,9 +48,6 @@ public final class AeadCipher {
         }
     }
 
-    /**
-     * 解密并校验 IV 与声明的会话、方向和序号一致。
-     */
     public static byte[] unseal(
             byte[] key, byte[] sessionId, int direction, long sequence, byte[] aad, byte[] sealed)
             throws CryptoException {
@@ -88,7 +73,7 @@ public final class AeadCipher {
             cipher.updateAAD(aad);
             return cipher.doFinal(sealed, IV_BYTES, sealed.length - IV_BYTES);
         } catch (GeneralSecurityException e) {
-            // 统一返回认证失败。
+
             throw new CryptoException(
                     CryptoException.Reason.AUTHENTICATION_FAILED, "unseal failed", e);
         }

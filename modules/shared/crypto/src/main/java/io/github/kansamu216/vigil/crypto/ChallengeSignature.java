@@ -5,11 +5,6 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.Signature;
 
-/**
- * 挑战签名与校验（SHA256withRSA）。
- *
- * <p>签名校验使用已核对指纹的服务器公钥。</p>
- */
 public final class ChallengeSignature {
 
     private static final String ALGORITHM = "SHA256withRSA";

@@ -12,9 +12,6 @@ import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-/**
- * 密钥生命周期：首次生成、重启稳定、文件缺失或损坏时终止启动。
- */
 class ServerKeyStoreTest {
 
     @Test

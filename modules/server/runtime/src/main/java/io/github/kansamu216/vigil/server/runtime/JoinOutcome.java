@@ -1,8 +1,5 @@
 package io.github.kansamu216.vigil.server.runtime;
 
-/**
- * 玩家进服的两种结果：下发挑战，或直接拒绝（已在封禁中）。
- */
 public final class JoinOutcome {
 
     private final boolean allowed;

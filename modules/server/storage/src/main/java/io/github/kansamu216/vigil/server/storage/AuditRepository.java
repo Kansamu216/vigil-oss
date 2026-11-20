@@ -7,12 +7,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-/**
- * 审计仓储。
- *
- * <p>只写事件码与必要元数据：不写密钥、原始硬件值、进程清单或报告原文。
- * 保留期清理由 {@link #purgeOlderThan(long)} 负责，调用方定期执行。</p>
- */
 public final class AuditRepository {
 
     private final Database database;

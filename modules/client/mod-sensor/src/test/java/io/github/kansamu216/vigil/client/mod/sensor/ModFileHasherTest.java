@@ -10,9 +10,6 @@ import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-/**
- * Mod 文件摘要与标准测试向量一致；文件不存在时报错。
- */
 class ModFileHasherTest {
 
     private static final Charset UTF_8 = Charset.forName("UTF-8");

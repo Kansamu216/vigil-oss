@@ -11,12 +11,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 
-/**
- * 服务端配置。
- *
- * <p>首次启动写入默认文件；非法数值按范围约束处理。
- * 数据库文件限制在数据目录内。</p>
- */
 public final class ServerSettings {
 
     public static final String FILE_NAME = "server.properties";
@@ -77,9 +71,6 @@ public final class ServerSettings {
         return defaults;
     }
 
-    /**
-     * 解析为运行时配置；数据目录在调用时确定。
-     */
     public ServerConfig toServerConfig(Path dataDirectory) {
         Path database = resolveDatabase(dataDirectory);
         long ttlSeconds = readLong(KEY_CHALLENGE_TTL_SECONDS, 20L, 1L, 120L);

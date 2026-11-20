@@ -24,9 +24,6 @@ import java.nio.file.Path;
 import java.security.KeyPair;
 import org.junit.jupiter.api.Test;
 
-/**
- * 进服到处置的完整链路测试。
- */
 class GuardRuntimeTest {
 
     private static final long NOW = 1_700_000_000_000L;
@@ -107,7 +104,6 @@ class GuardRuntimeTest {
             verifyClient(client, challenge, join.challengeFrame());
             AuthRequest request = client.respond(challenge, report, 0L);
 
-            // 客户端数据不产生自动处置。
             AuthEvaluation evaluation = runtime.onAuthFrame(PLAYER, authFrame(request), NOW + 100L);
             assertEquals(VerdictAction.ALERT, evaluation.verdict().action());
             assertEquals(0, runtime.activeBanCount(NOW + 200L));

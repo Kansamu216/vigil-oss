@@ -6,12 +6,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Optional;
 
-/**
- * 封禁仓储。所有 SQL 参数化；只返回当前有效封禁。
- */
 public final class BanRepository {
 
-    /** expiresAtMillis 为 0 表示永久。 */
     private static final long PERMANENT = 0L;
 
     private final Database database;
@@ -69,7 +65,6 @@ public final class BanRepository {
         }
     }
 
-    /** 解封：把该玩家所有有效封禁置为无效，返回受影响条数。 */
     public int unban(String playerUuid) {
         String sql = "UPDATE bans SET active = 0 WHERE player_uuid = ? AND active = 1";
         try (PreparedStatement statement = database.connection().prepareStatement(sql)) {
@@ -92,7 +87,6 @@ public final class BanRepository {
         }
     }
 
-    /** 清理已过期封禁，返回条数；由周期性维护调用。 */
     public int purgeExpired(long nowMillis) {
         String sql = "UPDATE bans SET active = 0 WHERE active = 1 AND expires_at > 0 AND expires_at <= ?";
         try (PreparedStatement statement = database.connection().prepareStatement(sql)) {

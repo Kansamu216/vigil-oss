@@ -9,11 +9,6 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 
-/**
- * 承载协议信封的会话帧。
- *
- * <p>只做字节搬运；长度上限与核心协议一致。</p>
- */
 public record VigilFramePayload(byte[] data) implements CustomPacketPayload {
 
     public static final Type<VigilFramePayload> TYPE = new Type<>(

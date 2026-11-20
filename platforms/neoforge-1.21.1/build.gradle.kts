@@ -10,8 +10,6 @@ plugins {
 group = "io.github.kansamu216.vigil.platform"
 version = "0.1.0-dev.2"
 
-// 1.21.x adapters use Java 21; shared core keeps the Java 8 API surface and is
-// consumed as a versioned artifact, never as a source set of this build.
 java {
     toolchain {
         languageVersion.set(JavaLanguageVersion.of(21))
@@ -37,13 +35,11 @@ val clientInternalNamespace = "$clientInternalRoot.protocol"
 val platformPackagePrefix = "io.github.kansamu216.vigil.platform."
 val serverPackagePrefix = "io.github.kansamu216.vigil.platform.neoforge1211.server."
 
-// Separate source sets for server and client artifacts.
 val sharedCore: Configuration by configurations.creating
 val serverCore: Configuration by configurations.creating
 val clientCore: Configuration by configurations.creating
 val devCore: Configuration by configurations.creating
 
-// Server-only sources are compiled into the server jar only.
 val serverSourceSet = sourceSets.create("server") {
     java.srcDir("src/server/java")
     resources.srcDir("src/server/resources")
@@ -56,7 +52,7 @@ configurations["serverImplementation"].extendsFrom(configurations["implementatio
 configurations["serverRuntimeOnly"].extendsFrom(configurations["runtimeOnly"])
 configurations["clientImplementation"].extendsFrom(configurations["implementation"])
 configurations["clientRuntimeOnly"].extendsFrom(configurations["runtimeOnly"])
-// 两端源集都需要加载器与 Minecraft 类型，继承主源集的编译/运行类路径。
+
 serverSourceSet.compileClasspath += sourceSets.main.get().output + sourceSets.main.get().compileClasspath
 serverSourceSet.runtimeClasspath += serverSourceSet.output + sourceSets.main.get().runtimeClasspath
 clientSourceSet.compileClasspath += sourceSets.main.get().output + sourceSets.main.get().compileClasspath
@@ -82,7 +78,7 @@ dependencies {
     serverCore("$coreGroup:server-runtime:$coreVersion")
     devCore("$coreGroup:shared-protocol:$coreVersion")
     devCore("$coreGroup:server-runtime:$coreVersion")
-    // Dev runs share one classloader; client core is included for dev runs only.
+
     devCore("$coreGroup:client-agent:$coreVersion")
     devCore("$coreGroup:client-mod-sensor:$coreVersion")
 }
@@ -145,7 +141,6 @@ val serverJar = tasks.named<ShadowJar>("shadowJar") {
     applySidePackaging("server", serverCore, serverSourceSet)
 }
 
-// Shared core classes are relocated in the client jar.
 val clientJar = tasks.register<ShadowJar>("clientJar") {
     applySidePackaging("client", clientCore, clientSourceSet)
     sharedNamespaces.forEach { namespace ->
@@ -176,10 +171,6 @@ fun classBytes(file: File, className: String): ByteArray? =
 fun ByteArray.containsAscii(text: String): Boolean =
     String(this, Charsets.ISO_8859_1).contains(text)
 
-/**
- * Side jar acceptance: metadata, relocation, no server code in the client, and
- * no package outside the platform namespace shared by both jars.
- */
 val verifySideJars = tasks.register("verifySideJars") {
     group = "verification"
     description = "Checks side jars for metadata, relocation, side isolation and split packages."

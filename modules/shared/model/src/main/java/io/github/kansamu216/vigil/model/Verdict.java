@@ -1,10 +1,5 @@
 package io.github.kansamu216.vigil.model;
 
-/**
- * 服务端判定结果。
- *
- * <p>由服务端判定流程生成。</p>
- */
 public final class Verdict {
 
     private final EvidenceLevel level;

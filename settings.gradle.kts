@@ -35,5 +35,3 @@ val modules = listOf(
 )
 
 modules.forEach { include(":$it") }
-
-// Platform builds stay independent so loader toolchains can evolve separately.

@@ -7,9 +7,6 @@ import net.neoforged.fml.common.Mod;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * NeoForge 1.21.1 入口：加载识别与通道注册。
- */
 @Mod(VigilNeoForge.MOD_ID)
 public final class VigilNeoForge {
 

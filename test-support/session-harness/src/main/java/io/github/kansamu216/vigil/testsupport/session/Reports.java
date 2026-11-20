@@ -6,9 +6,6 @@ import io.github.kansamu216.vigil.model.Observation;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * 测试样本构造器，不进入交付包。
- */
 public final class Reports {
 
     private static final String SHA = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";

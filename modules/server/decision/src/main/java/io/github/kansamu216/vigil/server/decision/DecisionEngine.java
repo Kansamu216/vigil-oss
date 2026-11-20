@@ -8,12 +8,6 @@ import io.github.kansamu216.vigil.model.VerdictAction;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
-/**
- * 判定汇总与处置门槛。
- *
- * <p>客户端数据作为观测事实；服务端验证结果才能形成判定。
- * 统计信号不触发自动处置，默认只记录告警。</p>
- */
 public final class DecisionEngine {
 
     private static final String STATS_PREFIX = "STATS_";
@@ -25,7 +19,6 @@ public final class DecisionEngine {
         this.policy = policy;
     }
 
-    /** 只有客户端报告时的入口；不产生自动处置。 */
     public Verdict evaluate(ClientReport report) {
         return evaluate(report, ServerEvidence.none());
     }

@@ -21,11 +21,6 @@ import io.github.kansamu216.vigil.protocol.payload.ReportPayload;
 import java.nio.charset.Charset;
 import java.security.PublicKey;
 
-/**
- * 客户端侧会话状态机。
- *
- * <p>按固定顺序校验挑战并建立会话：信任锚、签名、有效期、应答。</p>
- */
 public final class ClientSession {
 
     private static final Charset UTF_8 = Charset.forName("UTF-8");
@@ -50,9 +45,6 @@ public final class ClientSession {
         return pinnedFingerprint;
     }
 
-    /**
-     * 校验挑战并建立会话；只有成功后才能构造应答。
-     */
     public void acceptChallenge(Challenge challenge, byte[] signature, long nowMillis)
             throws ClientHandshakeException {
         if (challenge.isExpired(nowMillis)) {
@@ -85,9 +77,6 @@ public final class ClientSession {
         this.verifiedExpiresAt = challenge.expiresAtMillis();
     }
 
-    /**
-     * 构造认证应答。调用方负责把它编码进 AUTH 信封。
-     */
     public AuthRequest createAuthRequest(Challenge challenge, ClientReport report, long nowMillis)
             throws ClientHandshakeException {
         if (serverPublicKey == null
@@ -146,9 +135,6 @@ public final class ClientSession {
         return new AuthRequest(challenge.sessionId(), challenge.nonce(), wrappedKey, encrypted);
     }
 
-    /**
-     * 构造 AUTH 帧（含信封），供平台层直接发送。
-     */
     public byte[] authFrame(Challenge challenge, ClientReport report, long nowMillis)
             throws ClientHandshakeException {
         AuthRequest request = createAuthRequest(challenge, report, nowMillis);

@@ -10,9 +10,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-/**
- * 存储层：migration、封禁与审计的正常/过期/重开路径。
- */
 class StorageTest {
 
     private static final long NOW = 1_700_000_000_000L;

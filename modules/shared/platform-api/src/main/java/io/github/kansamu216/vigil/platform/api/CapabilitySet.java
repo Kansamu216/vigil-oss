@@ -4,11 +4,6 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Set;
 
-/**
- * 平台能力集合。
- *
- * <p>业务代码用 {@link #supports(Capability)} 分支，而不是试探性调用再吞异常。</p>
- */
 public final class CapabilitySet {
 
     private final Set<Capability> capabilities;
@@ -37,7 +32,6 @@ public final class CapabilitySet {
         return capabilities;
     }
 
-    /** 缺失能力清单，用于启动时输出一次性的降级说明。 */
     public Set<Capability> missingFrom(Capability... expected) {
         EnumSet<Capability> missing = EnumSet.noneOf(Capability.class);
         for (Capability capability : expected) {

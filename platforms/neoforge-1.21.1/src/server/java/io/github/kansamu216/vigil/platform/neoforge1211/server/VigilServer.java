@@ -33,12 +33,6 @@ import net.neoforged.neoforge.network.PacketDistributor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * 服务端适配层：把加载器生命周期接到运行时。
- *
- * <p>网络线程只投递字节；解码、判定和存储由有界工作线程执行。</p>
- */
-// 本类只打进 server jar；只有专用服务端打开数据库与工作线程。
 @EventBusSubscriber(modid = VigilNeoForge.MOD_ID, bus = EventBusSubscriber.Bus.GAME)
 public final class VigilServer {
 
@@ -80,7 +74,7 @@ public final class VigilServer {
             runtime = null;
             worker = null;
             VigilNetwork.setSink(null);
-            // 校验不可用时服务器继续运行，并记录状态。
+
             LOGGER.error("[VIGIL-SERVER-002] runtime unavailable, guard disabled", e);
         }
     }
@@ -145,9 +139,6 @@ public final class VigilServer {
         active.tick(System.currentTimeMillis());
     }
 
-    /**
-     * 网络线程入口：只做类型检查与投递。
-     */
     private static void onFrame(Player player, byte[] frame) {
         if (!(player instanceof ServerPlayer serverPlayer)) {
             return;
@@ -167,7 +158,7 @@ public final class VigilServer {
                         LOGGER.warn("[VIGIL-FRAME-001] handshake rejected player={}", playerId);
                     }
                 } catch (RuntimeException e) {
-                    // 内部异常只记录，不影响服务器主线程。
+
                     LOGGER.warn("[VIGIL-FRAME-002] frame handling failed player={}", playerId, e);
                 }
             });

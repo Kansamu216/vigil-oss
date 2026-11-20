@@ -9,9 +9,6 @@ import java.nio.charset.Charset;
 import java.security.KeyPair;
 import org.junit.jupiter.api.Test;
 
-/**
- * RSA 包裹、签名与密钥隔离。
- */
 class RsaOaepTest {
 
     private static final Charset UTF_8 = Charset.forName("UTF-8");

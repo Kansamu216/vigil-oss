@@ -10,11 +10,6 @@ import io.github.kansamu216.vigil.protocol.WireWriter;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * 客户端报告编解码。
- *
- * <p>列表先读数量再读元素，数量受协议上限约束。</p>
- */
 public final class ReportPayload {
 
     private ReportPayload() {

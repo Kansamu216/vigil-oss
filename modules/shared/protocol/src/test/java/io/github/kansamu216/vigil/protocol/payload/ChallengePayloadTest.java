@@ -9,9 +9,6 @@ import io.github.kansamu216.vigil.protocol.ProtocolException;
 import io.github.kansamu216.vigil.protocol.WireWriter;
 import org.junit.jupiter.api.Test;
 
-/**
- * 挑战负载携带公钥并可完成验签。
- */
 class ChallengePayloadTest {
 
     private static final byte[] PUBLIC_KEY = new byte[294];

@@ -19,11 +19,6 @@ import java.util.EnumSet;
 import java.util.Set;
 import java.nio.file.attribute.PosixFilePermission;
 
-/**
- * 服务端密钥持久化。
- *
- * <p>密钥只在首次启动生成；文件缺失或损坏时终止启动，不静默重建。</p>
- */
 public final class ServerKeyStore {
 
     public static final String PRIVATE_KEY_FILE = "server-private.der";
@@ -79,7 +74,6 @@ public final class ServerKeyStore {
         return keyPair;
     }
 
-    /** 供管理员分发的信任锚指纹。 */
     public String fingerprint() {
         return fingerprint;
     }
@@ -116,9 +110,9 @@ public final class ServerKeyStore {
                             PosixFilePermission.OTHERS_READ);
             Files.setPosixFilePermissions(path, permissions);
         } catch (UnsupportedOperationException e) {
-            // 没有 POSIX 权限模型的文件系统不阻断启动；部署时通过 ACL 限制访问。
+
         } catch (IOException e) {
-            // 权限收紧失败不改变密钥内容，只记录提示。
+
         }
     }
 }

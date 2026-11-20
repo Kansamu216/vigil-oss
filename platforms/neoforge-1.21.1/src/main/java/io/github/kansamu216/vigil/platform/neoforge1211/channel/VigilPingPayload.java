@@ -7,9 +7,6 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 
-/**
- * 通道上的连通性报文，只携带协议版本与单调序号；长度固定。
- */
 public record VigilPingPayload(int protocolVersion, long sequence) implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Type<VigilPingPayload> TYPE =

@@ -15,9 +15,6 @@ import java.security.KeyPair;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-/**
- * 握手状态机的正常路径与失败分支。
- */
 class HandshakeServiceTest {
 
     private static final long NOW = 1_700_000_000_000L;
@@ -164,7 +161,7 @@ class HandshakeServiceTest {
 
         AuthOutcome outcome = service.authenticate(request, NOW + 1L);
         assertTrue(outcome.isSuccess());
-        // 握手层只返回协议结论。
+
         assertEquals(1, outcome.result().report().observations().size());
         outcome.result().wipe();
     }
