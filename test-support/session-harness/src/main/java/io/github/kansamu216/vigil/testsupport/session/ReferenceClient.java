@@ -1,9 +1,11 @@
 package io.github.kansamu216.vigil.testsupport.session;
 
+import io.github.kansamu216.vigil.client.agent.ClientHandshakeException;
+import io.github.kansamu216.vigil.client.agent.ClientSession;
 import io.github.kansamu216.vigil.crypto.AeadCipher;
-import io.github.kansamu216.vigil.crypto.ChallengeSignature;
 import io.github.kansamu216.vigil.crypto.CryptoException;
 import io.github.kansamu216.vigil.crypto.KeyFingerprint;
+import io.github.kansamu216.vigil.crypto.PublicKeys;
 import io.github.kansamu216.vigil.crypto.RsaOaep;
 import io.github.kansamu216.vigil.model.AuthRequest;
 import io.github.kansamu216.vigil.model.Challenge;
@@ -17,69 +19,83 @@ import java.nio.charset.Charset;
 import java.security.PublicKey;
 
 /**
- * 参考客户端实现，只覆盖客户端在握手中的必要动作：
- *
- * <ol>
- *   <li>用预置指纹校验服务器公钥，校验失败直接中止；</li>
- *   <li>校验挑战签名；</li>
- *   <li>生成一次性会话密钥，用服务器公钥 OAEP 包裹；</li>
- *   <li>把报告按 AUTH 帧的 AAD/序号加密。</li>
- * </ol>
- *
- * <p>它不是产品客户端：没有传感器、没有采集、没有 UI。真实 Agent 复用同样的
- * 协议与密码学调用，但不得绕过这里的顺序。</p>
+ * 测试用参考客户端：薄封装 {@link ClientSession}，并额外断言服务端公钥与
+ * 测试持有的密钥一致。产品客户端不使用本类。
  */
 public final class ReferenceClient {
 
-    private static final Charset UTF_8 = Charset.forName("UTF-8");
-
-    private final PublicKey serverPublicKey;
+    private final PublicKey expectedPublicKey;
     private final String expectedFingerprint;
+    private final ClientSession session;
 
-    public ReferenceClient(PublicKey serverPublicKey, String expectedFingerprint) {
-        this.serverPublicKey = serverPublicKey;
+    public ReferenceClient(PublicKey expectedPublicKey, String expectedFingerprint)
+            throws ClientHandshakeException {
+        this.expectedPublicKey = expectedPublicKey;
         this.expectedFingerprint = expectedFingerprint;
+        this.session = new ClientSession(expectedFingerprint);
     }
 
-    /** 客户端侧信任锚校验：公钥指纹必须与预置值一致。 */
     public boolean verifyTrustAnchor() {
-        return expectedFingerprint.equals(KeyFingerprint.of(serverPublicKey));
+        return expectedFingerprint.equals(KeyFingerprint.of(expectedPublicKey));
     }
 
-    public void verifyChallenge(Challenge challenge, byte[] signature) throws CryptoException {
+    public void verifyChallenge(Challenge challenge, byte[] signature, long nowMillis)
+            throws ClientHandshakeException {
         if (!verifyTrustAnchor()) {
-            throw new CryptoException(
-                    CryptoException.Reason.SIGNATURE_INVALID, "trust anchor mismatch");
+            throw new ClientHandshakeException(
+                    ClientHandshakeException.Reason.UNTRUSTED_SERVER,
+                    "test trust anchor does not match the expected server key");
         }
-        if (!expectedFingerprint.equals(challenge.serverKeyFingerprint())) {
-            throw new CryptoException(
-                    CryptoException.Reason.SIGNATURE_INVALID, "challenge fingerprint mismatch");
+        try {
+            PublicKey presented = PublicKeys.decodeRsa(challenge.serverPublicKey());
+            if (!expectedPublicKey.equals(presented)) {
+                throw new ClientHandshakeException(
+                        ClientHandshakeException.Reason.UNTRUSTED_SERVER,
+                        "challenge key differs from the expected server key");
+            }
+        } catch (CryptoException e) {
+            throw new ClientHandshakeException(
+                    ClientHandshakeException.Reason.INVALID_KEY, "invalid challenge key", e);
         }
-        ChallengeSignature.verify(serverPublicKey, challenge.signedPayload(), signature);
+        session.acceptChallenge(challenge, signature, nowMillis);
     }
 
     /**
-     * 生成认证应答。报告必须使用本次挑战的 nonce，否则服务端会拒绝。
+     * 测试用应答：使用挑战签发时间作为“当前时间”，避免使用真实时钟导致
+     * 固定测试时间戳被判定过期。
      */
     public AuthRequest respond(Challenge challenge, ClientReport report, long sequence)
+            throws ClientHandshakeException {
+        return session.createAuthRequest(challenge, report, challenge.issuedAtMillis());
+    }
+
+    /**
+     * 测试专用：不经过信任锚校验，直接用给定公钥构造应答，
+     * 用于构造“跨交付/错误公钥”这类服务端必须拒绝的样本。
+     */
+    public static AuthRequest respondWithKey(PublicKey key, Challenge challenge, ClientReport report)
             throws CryptoException {
         if (!challenge.nonce().equals(report.nonce())) {
             throw new IllegalArgumentException("report nonce does not match challenge");
         }
+        Charset utf8 = Charset.forName("UTF-8");
         byte[] sessionKey = AeadCipher.newSessionKey();
-        byte[] wrappedKey = RsaOaep.wrap(serverPublicKey, sessionKey);
-
-        byte[] sessionIdBytes = challenge.sessionId().getBytes(UTF_8);
+        byte[] wrappedKey = RsaOaep.wrap(key, sessionKey);
+        byte[] sessionIdBytes = challenge.sessionId().getBytes(utf8);
         byte[] aad = AssociatedData.build(
                 ProtocolVersion.MAJOR,
                 sessionIdBytes,
                 MessageType.AUTH.id(),
                 Direction.CLIENT_TO_SERVER,
-                sequence);
+                0L);
         byte[] plain = ReportPayload.encode(report);
         byte[] encrypted = AeadCipher.seal(
-                sessionKey, sessionIdBytes, Direction.CLIENT_TO_SERVER.wireValue(), sequence, aad, plain);
-
+                sessionKey,
+                sessionIdBytes,
+                Direction.CLIENT_TO_SERVER.wireValue(),
+                0L,
+                aad,
+                plain);
         io.github.kansamu216.vigil.crypto.Secrets.wipe(plain);
         io.github.kansamu216.vigil.crypto.Secrets.wipe(sessionKey);
         return new AuthRequest(challenge.sessionId(), challenge.nonce(), wrappedKey, encrypted);

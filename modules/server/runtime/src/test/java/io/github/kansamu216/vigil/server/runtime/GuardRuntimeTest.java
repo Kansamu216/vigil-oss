@@ -48,6 +48,7 @@ class GuardRuntimeTest {
 
             Challenge challenge = challengeOf(join.challengeFrame());
             ReferenceClient client = new ReferenceClient(keys.getPublic(), runtime.publicKeyFingerprint());
+            verifyClient(client, challenge, join.challengeFrame());
             AuthRequest request = client.respond(challenge, Reports.clean(challenge.nonce(), PLAYER), 0L);
 
             AuthEvaluation evaluation = runtime.onAuthFrame(
@@ -79,6 +80,7 @@ class GuardRuntimeTest {
             ReferenceClient client = new ReferenceClient(keys.getPublic(), runtime.publicKeyFingerprint());
             ClientReport report = Reports.withObservations(
                     challenge.nonce(), PLAYER, new Observation("STATS_CPS_HIGH", "cps=20", 90));
+            verifyClient(client, challenge, join.challengeFrame());
             AuthRequest request = client.respond(challenge, report, 0L);
 
             AuthEvaluation evaluation = runtime.onAuthFrame(PLAYER, authFrame(request), NOW + 100L);
@@ -102,6 +104,7 @@ class GuardRuntimeTest {
             ClientReport report = Reports.withObservations(
                     challenge.nonce(), PLAYER,
                     new Observation("INTEGRITY_HASH_MISMATCH", "mod foo", 100));
+            verifyClient(client, challenge, join.challengeFrame());
             AuthRequest request = client.respond(challenge, report, 0L);
 
             // 即使打开全部自动处置，客户端也只能产生观测级证据。
@@ -127,6 +130,14 @@ class GuardRuntimeTest {
             assertEquals(null, evaluation.verdict());
             assertEquals(0, listener.actions.size());
         }
+    }
+
+    private static void verifyClient(ReferenceClient client, Challenge challenge, byte[] frame)
+            throws Exception {
+        io.github.kansamu216.vigil.protocol.Envelope envelope = EnvelopeCodec.decode(frame);
+        io.github.kansamu216.vigil.protocol.payload.ChallengePayload.Decoded decoded =
+                io.github.kansamu216.vigil.protocol.payload.ChallengePayload.decode(envelope.payload());
+        client.verifyChallenge(challenge, decoded.signature(), NOW);
     }
 
     private static byte[] authFrame(AuthRequest request) {

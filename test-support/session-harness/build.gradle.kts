@@ -2,6 +2,7 @@
 // 供会话测试与后续真实客户端 Agent 共用同一套密码学口径。
 dependencies {
     api(project(":modules:shared:protocol"))
+    api(project(":modules:client:agent"))
     api(project(":modules:shared:model"))
     implementation(project(":modules:shared:crypto"))
 }

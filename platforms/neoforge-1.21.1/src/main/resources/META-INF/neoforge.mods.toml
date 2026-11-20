@@ -4,7 +4,7 @@ license = "All Rights Reserved"
 
 [[mods]]
 modId = "vigil"
-version = "0.1.0-dev.1"
+version = "0.1.0-dev.2"
 displayName = "Vigil"
 description = '''Vigil（守夜）客户端 Agent + 服务端校验骨架。M0 阶段只验证加载、双端 channel 与包结构，不含检测业务逻辑。'''
 

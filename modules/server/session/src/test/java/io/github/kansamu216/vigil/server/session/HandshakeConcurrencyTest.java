@@ -30,6 +30,7 @@ class HandshakeConcurrencyTest {
         ReferenceClient client = new ReferenceClient(server.getPublic(), service.keyFingerprint());
         SignedChallenge signed = service.issueChallenge("player-uuid-1", 1_700_000_000_000L);
         Challenge challenge = signed.challenge();
+        client.verifyChallenge(challenge, signed.signature(), 1_700_000_000_000L);
         AuthRequest request = client.respond(
                 challenge, Reports.clean(challenge.nonce(), "player-uuid-1"), 0L);
 

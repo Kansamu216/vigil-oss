@@ -21,7 +21,7 @@ modules/server/session       挑战、握手、保活、限流与超时
 modules/server/decision      服务端证据分级、评分与处置门槛
 modules/server/storage       SQLite migration、封禁与审计 Repository
 modules/server/runtime       配置与业务链路装配
-platforms/neoforge-1.21.1    NeoForge 1.21.1 独立适配构建
+platforms/neoforge-1.21.1    NeoForge 1.21.1 独立适配构建（client/server 源集分离）
 ```
 
 依赖方向：`platform → runtime → session/decision/storage → shared`。`shared` 不依赖服务端或客户端业务模块。
@@ -37,7 +37,7 @@ platforms/neoforge-1.21.1    NeoForge 1.21.1 独立适配构建
 
 - 信封包含版本、消息 id、方向、单调序号和有界负载。
 - AAD 绑定版本、会话 id、消息 id、方向和序号。
-- 挑战使用一次性 nonce、有效期和 SHA256withRSA 签名；客户端按预置公钥指纹验证。
+- 挑战使用一次性 nonce、有效期和 SHA256withRSA 签名；挑战携带服务器公钥，客户端先按预置指纹校验公钥，再验证签名。未配置指纹时拒绝握手，不做首次信任自动接受。
 - 每次连接生成独立 AES-256 会话密钥，使用服务端 RSA-2048 公钥 OAEP 包裹。
 - 私钥只在服务端受控目录，不进入客户端产物、日志或仓库。
 

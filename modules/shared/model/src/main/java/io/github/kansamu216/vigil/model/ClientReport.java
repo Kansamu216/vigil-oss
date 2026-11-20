@@ -47,8 +47,10 @@ public final class ClientReport {
         if (observations.size() > 256) {
             throw new IllegalArgumentException("too many observations: " + observations.size());
         }
-        if (fingerprintHash == null || fingerprintHash.length() != 64) {
-            throw new IllegalArgumentException("fingerprint must be 64 hex chars");
+        if (fingerprintHash == null
+                || (!fingerprintHash.isEmpty() && fingerprintHash.length() != 64)) {
+            // 客户端指纹是可选的；未启用采集时发送空串，而不是伪造一个哈希。
+            throw new IllegalArgumentException("fingerprint must be empty or 64 hex chars");
         }
         this.protocolVersion = protocolVersion;
         this.nonce = nonce;

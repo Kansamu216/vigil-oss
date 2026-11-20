@@ -46,9 +46,10 @@ class HandshakeServiceTest {
     void completesHandshake() throws Exception {
         SignedChallenge signed = issue(NOW);
         Challenge challenge = signed.challenge();
-        client.verifyChallenge(challenge, signed.signature());
+        client.verifyChallenge(challenge, signed.signature(), NOW);
 
         ClientReport report = Reports.clean(challenge.nonce(), PLAYER);
+        client.verifyChallenge(challenge, signed.signature(), NOW);
         AuthRequest request = client.respond(challenge, report, 0L);
 
         AuthOutcome outcome = service.authenticate(request, NOW + 1_000L);
@@ -63,6 +64,7 @@ class HandshakeServiceTest {
     void rejectsWrongNonce() throws Exception {
         SignedChallenge signed = issue(NOW);
         Challenge challenge = signed.challenge();
+        client.verifyChallenge(challenge, signed.signature(), NOW);
         AuthRequest valid = client.respond(challenge, Reports.clean(challenge.nonce(), PLAYER), 0L);
         AuthRequest forged = new AuthRequest(
                 valid.sessionId(), "0000000000000000", valid.wrappedSessionKey(), valid.encryptedReport());
@@ -76,6 +78,7 @@ class HandshakeServiceTest {
     void rejectsExpiredChallenge() throws Exception {
         SignedChallenge signed = issue(NOW);
         Challenge challenge = signed.challenge();
+        client.verifyChallenge(challenge, signed.signature(), NOW);
         AuthRequest request = client.respond(challenge, Reports.clean(challenge.nonce(), PLAYER), 0L);
 
         AuthOutcome outcome = service.authenticate(request, NOW + TTL + 1L);
@@ -88,6 +91,7 @@ class HandshakeServiceTest {
     void rejectsRepeatedAuth() throws Exception {
         SignedChallenge signed = issue(NOW);
         Challenge challenge = signed.challenge();
+        client.verifyChallenge(challenge, signed.signature(), NOW);
         AuthRequest request = client.respond(challenge, Reports.clean(challenge.nonce(), PLAYER), 0L);
 
         assertTrue(service.authenticate(request, NOW + 1L).isSuccess());
@@ -99,12 +103,10 @@ class HandshakeServiceTest {
     @Test
     void rejectsRequestFromAnotherDelivery() throws Exception {
         KeyPair otherDelivery = RsaOaep.generateKeyPair();
-        ReferenceClient foreignClient =
-                new ReferenceClient(otherDelivery.getPublic(), service.keyFingerprint());
         SignedChallenge signed = issue(NOW);
         Challenge challenge = signed.challenge();
-        AuthRequest request =
-                foreignClient.respond(challenge, Reports.clean(challenge.nonce(), PLAYER), 0L);
+        AuthRequest request = ReferenceClient.respondWithKey(
+                otherDelivery.getPublic(), challenge, Reports.clean(challenge.nonce(), PLAYER));
 
         AuthOutcome outcome = service.authenticate(request, NOW + 1L);
         assertFalse(outcome.isSuccess());
@@ -115,6 +117,7 @@ class HandshakeServiceTest {
     void rejectsUnknownSession() throws Exception {
         SignedChallenge signed = issue(NOW);
         Challenge challenge = signed.challenge();
+        client.verifyChallenge(challenge, signed.signature(), NOW);
         AuthRequest request = client.respond(challenge, Reports.clean(challenge.nonce(), PLAYER), 0L);
         AuthRequest unknown = new AuthRequest(
                 "no-such-session", request.nonce(), request.wrappedSessionKey(), request.encryptedReport());
@@ -128,6 +131,7 @@ class HandshakeServiceTest {
     void rateLimitsRepeatedFailures() throws Exception {
         SignedChallenge signed = issue(NOW);
         Challenge challenge = signed.challenge();
+        client.verifyChallenge(challenge, signed.signature(), NOW);
         AuthRequest valid = client.respond(challenge, Reports.clean(challenge.nonce(), PLAYER), 0L);
         AuthRequest forged = new AuthRequest(
                 valid.sessionId(), "0000000000000000", valid.wrappedSessionKey(), valid.encryptedReport());
@@ -143,6 +147,7 @@ class HandshakeServiceTest {
     void keepsMonotonicSequenceOnKeepalive() throws Exception {
         SignedChallenge signed = issue(NOW);
         Challenge challenge = signed.challenge();
+        client.verifyChallenge(challenge, signed.signature(), NOW);
         AuthRequest request = client.respond(challenge, Reports.clean(challenge.nonce(), PLAYER), 0L);
         service.authenticate(request, NOW + 1L);
 
@@ -157,6 +162,7 @@ class HandshakeServiceTest {
         Challenge challenge = signed.challenge();
         ClientReport report = Reports.withObservations(
                 challenge.nonce(), PLAYER, new Observation("INTEGRITY_HASH_MISMATCH", "mod foo", 60));
+        client.verifyChallenge(challenge, signed.signature(), NOW);
         AuthRequest request = client.respond(challenge, report, 0L);
 
         AuthOutcome outcome = service.authenticate(request, NOW + 1L);

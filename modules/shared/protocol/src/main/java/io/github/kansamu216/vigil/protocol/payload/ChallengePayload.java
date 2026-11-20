@@ -19,12 +19,14 @@ public final class ChallengePayload {
 
     public static byte[] encode(Challenge challenge, byte[] signature) {
         WireWriter writer = new WireWriter(256, ProtocolLimits.MAX_PAYLOAD_BYTES);
-        writer.u16(1);
+        // schema 2：增加服务器公钥。客户端必须先校验预置指纹，再使用该公钥验签。
+        writer.u16(2);
         writer.string(challenge.sessionId());
         writer.string(challenge.nonce());
         writer.string(challenge.serverKeyFingerprint());
         writer.i64(challenge.issuedAtMillis());
         writer.i64(challenge.expiresAtMillis());
+        writer.bytes(challenge.serverPublicKey());
         writer.bytes(signature);
         return writer.toByteArray();
     }
@@ -32,7 +34,7 @@ public final class ChallengePayload {
     public static Decoded decode(byte[] payload) throws ProtocolException {
         WireReader reader = new WireReader(payload);
         int schema = reader.u16();
-        if (schema != 1) {
+        if (schema != 2) {
             throw new ProtocolException(
                     ProtocolException.Code.UNSUPPORTED_VERSION, "challenge schema: " + schema);
         }
@@ -41,6 +43,7 @@ public final class ChallengePayload {
         String fingerprint = reader.string();
         long issuedAt = reader.i64();
         long expiresAt = reader.i64();
+        byte[] serverPublicKey = reader.bytes();
         byte[] signature = reader.bytes();
         if (reader.remaining() != 0) {
             throw new ProtocolException(
@@ -48,7 +51,8 @@ public final class ChallengePayload {
         }
         Challenge challenge;
         try {
-            challenge = new Challenge(sessionId, nonce, fingerprint, issuedAt, expiresAt);
+            challenge = new Challenge(
+                    sessionId, nonce, fingerprint, serverPublicKey, issuedAt, expiresAt);
         } catch (IllegalArgumentException e) {
             throw new ProtocolException(ProtocolException.Code.FIELD_OUT_OF_RANGE, e.getMessage());
         }

@@ -8,7 +8,7 @@ plugins {
 }
 
 group = "io.github.kansamu216.vigil.platform"
-version = "0.1.0-dev.1"
+version = "0.1.0-dev.2"
 
 // 1.21.x adapters use Java 21; shared core keeps the Java 8 API surface and is
 // consumed as a versioned artifact, never as a source set of this build.
@@ -50,11 +50,19 @@ val serverSourceSet = sourceSets.create("server") {
     java.srcDir("src/server/java")
     resources.srcDir("src/server/resources")
 }
+val clientSourceSet = sourceSets.create("client") {
+    java.srcDir("src/client/java")
+    resources.srcDir("src/client/resources")
+}
 configurations["serverImplementation"].extendsFrom(configurations["implementation"])
 configurations["serverRuntimeOnly"].extendsFrom(configurations["runtimeOnly"])
-// 服务端源集需要加载器与 Minecraft 类型，继承主源集的编译/运行类路径。
+configurations["clientImplementation"].extendsFrom(configurations["implementation"])
+configurations["clientRuntimeOnly"].extendsFrom(configurations["runtimeOnly"])
+// 两端源集都需要加载器与 Minecraft 类型，继承主源集的编译/运行类路径。
 serverSourceSet.compileClasspath += sourceSets.main.get().output + sourceSets.main.get().compileClasspath
 serverSourceSet.runtimeClasspath += serverSourceSet.output + sourceSets.main.get().runtimeClasspath
+clientSourceSet.compileClasspath += sourceSets.main.get().output + sourceSets.main.get().compileClasspath
+clientSourceSet.runtimeClasspath += clientSourceSet.output + sourceSets.main.get().runtimeClasspath
 
 repositories {
     maven { url = uri("${rootDir}/../../build/module-repo") }
@@ -65,13 +73,22 @@ repositories {
 dependencies {
     implementation("$coreGroup:shared-protocol:$coreVersion")
     "serverImplementation"("$coreGroup:server-runtime:$coreVersion")
+    "clientImplementation"("$coreGroup:client-agent:$coreVersion")
+    "clientImplementation"("$coreGroup:client-mod-sensor:$coreVersion")
 
     sharedCore("$coreGroup:shared-protocol:$coreVersion")
     clientCore("$coreGroup:shared-protocol:$coreVersion")
+    clientCore("$coreGroup:client-agent:$coreVersion")
+    clientCore("$coreGroup:client-mod-sensor:$coreVersion")
     serverCore("$coreGroup:shared-protocol:$coreVersion")
     serverCore("$coreGroup:server-runtime:$coreVersion")
     devCore("$coreGroup:shared-protocol:$coreVersion")
     devCore("$coreGroup:server-runtime:$coreVersion")
+    // Dev runs load every registered source set in one JVM, so the client
+    // agent must also be present for the dedicated server dev launch to load
+    // the (unused) client subscriber class. Production server jar excludes it.
+    devCore("$coreGroup:client-agent:$coreVersion")
+    devCore("$coreGroup:client-mod-sensor:$coreVersion")
 }
 
 val coreDevSourceSet = sourceSets.create("coreDev") {
@@ -105,6 +122,7 @@ neoForge {
         register("vigil") {
             sourceSet(sourceSets.main.get())
             sourceSet(serverSourceSet)
+            sourceSet(clientSourceSet)
             sourceSet(coreDevSourceSet)
         }
     }
@@ -114,25 +132,27 @@ tasks.named("runServer") {
     dependsOn(serverSourceSet.classesTaskName)
 }
 
-fun ShadowJar.applySidePackaging(side: String, core: Configuration, includeServer: Boolean) {
+tasks.named("runClient") {
+    dependsOn(clientSourceSet.classesTaskName)
+}
+
+fun ShadowJar.applySidePackaging(side: String, core: Configuration, featureSourceSet: SourceSet) {
     archiveBaseName.set("vigil-$side-neoforge-1.21.1")
     archiveVersion.set("${project.version}")
     archiveClassifier.set("")
     setConfigurations(listOf<FileCollection>(core))
     from(sourceSets.main.get().output)
-    if (includeServer) {
-        from(serverSourceSet.output)
-    }
+    from(featureSourceSet.output)
 }
 
 val serverJar = tasks.named<ShadowJar>("shadowJar") {
-    applySidePackaging("server", serverCore, true)
+    applySidePackaging("server", serverCore, serverSourceSet)
 }
 
 // The client jar relocates shared core classes so a client and a server jar can
 // never contribute the same package to one class loader.
 val clientJar = tasks.register<ShadowJar>("clientJar") {
-    applySidePackaging("client", clientCore, false)
+    applySidePackaging("client", clientCore, clientSourceSet)
     sharedNamespaces.forEach { namespace ->
         relocate(namespace, namespace.replace(sharedRoot, clientInternalRoot))
     }
@@ -221,6 +241,16 @@ val verifySideJars = tasks.register("verifySideJars") {
             problems += "server jar does not carry the server runtime"
         }
 
+        val clientAgent = "io.github.kansamu216.vigil.platform.neoforge1211.client.VigilClient"
+        if (clientAgent !in clientClasses) {
+            problems += "client jar does not carry $clientAgent"
+        }
+        if (serverClasses.any { it.startsWith("io.github.kansamu216.vigil.platform.neoforge1211.client.") }) {
+            problems += "server jar contains client adapter classes"
+        }
+        if (serverPackages.any { it.startsWith("$sharedRoot.client.") }) {
+            problems += "server jar contains client agent packages"
+        }
         val channelClass = "io.github.kansamu216.vigil.platform.neoforge1211.channel.VigilChannel"
         val clientChannel = classBytes(clientFile, channelClass)
         val sharedPath = sharedNamespace.replace('.', '/')

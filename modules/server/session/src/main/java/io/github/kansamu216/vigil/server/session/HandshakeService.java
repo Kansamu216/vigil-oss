@@ -69,7 +69,12 @@ public final class HandshakeService {
         String sessionId = UUID.randomUUID().toString();
         String nonce = KeyFingerprint.hex(Secrets.randomBytes(16));
         Challenge challenge = new Challenge(
-                sessionId, nonce, keyFingerprint, nowMillis, nowMillis + challengeTtlMillis);
+                sessionId,
+                nonce,
+                keyFingerprint,
+                serverKeyPair.getPublic().getEncoded(),
+                nowMillis,
+                nowMillis + challengeTtlMillis);
         byte[] signature;
         try {
             signature = ChallengeSignature.sign(serverKeyPair.getPrivate(), challenge.signedPayload());

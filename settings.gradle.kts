@@ -25,6 +25,8 @@ val modules = listOf(
     "modules:shared:crypto",
     "modules:shared:model",
     "modules:shared:platform-api",
+    "modules:client:agent",
+    "modules:client:mod-sensor",
     "modules:server:runtime",
     "modules:server:session",
     "modules:server:storage",
